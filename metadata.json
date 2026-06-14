@@ -1,0 +1,6 @@
+{
+  "name": "CareGuard",
+  "description": "Multi-Agent Psychosocial Risk & Compliance Triage platform that simulates room-based multi-agent coordination, policy assessment, and human escalation workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

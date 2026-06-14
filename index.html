@@ -1,0 +1,3323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareGuard — Compliance Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070c14;
+      --surface: #0c1320;
+      --card: #101a28;
+      --hover: #152033;
+      --border: #1c2e42;
+      --accent: #1d6fb8;
+      --accent-bright: #2d8de8;
+      --teal: #0e9f8a;
+      --gold: #c9922a;
+      --danger: #e74c3c;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --text-primary: #dce8f5;
+      --text-muted: #7a95b0;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* HR Advisory indigo theme */
+      --indigo:       #4338ca;
+      --indigo-light: #818cf8;
+      --indigo-glow:  rgba(67, 56, 202, 0.18);
+      --bg-surface: var(--surface);
+      --bg-hover: var(--hover);
+      --txt-muted: var(--text-muted);
+      --txt-primary: var(--text-primary);
+      --txt-secondary: var(--text-muted);
+      --mono: var(--font-mono);
+      --warn-light: var(--warning);
+      --gold-light: var(--gold);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+
+    /* Fixed Left Sidebar */
+    aside {
+      width: 230px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .logo-container {
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-emoji {
+      font-size: 24px;
+    }
+    .logo-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.5px;
+    }
+    .logo-text p {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .band-sync-badge {
+      margin: 12px 20px 0;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 6px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 1.8s infinite;
+    }
+    .badge-text {
+      font-size: 11px;
+      color: var(--success);
+      font-weight: 500;
+    }
+
+    /* Navigation */
+    nav {
+      flex: 1;
+      padding: 24px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    .nav-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding-left: 12px;
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-item:hover {
+      background: var(--hover);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--accent);
+      color: var(--text-primary);
+    }
+    .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.8;
+    }
+    .nav-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .nav-badge.danger {
+      background: rgba(231, 76, 60, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(231, 76, 60, 0.25);
+    }
+    .nav-badge.amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .nav-badge.live {
+      background: rgba(45, 141, 232, 0.15);
+      color: var(--accent-bright);
+      border: 1px solid rgba(45, 141, 232, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    /* Sidebar Footer User Row */
+    .sidebar-user {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(12, 19, 32, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .user-info {
+      overflow: hidden;
+    }
+    .user-name {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    .user-role {
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Main Container Structure */
+    .main-wrapper {
+      margin-left: 230px;
+      width: calc(100% - 230px);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      height: 70px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    .header-breadcrumb {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .header-title-area h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    button {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--text-primary);
+    }
+    .btn-primary:hover {
+      background: var(--accent-bright);
+    }
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+    .btn-ghost:hover {
+      background: var(--hover);
+      border-color: var(--text-muted);
+    }
+    .btn-danger {
+      background: rgba(231, 76, 60, 0.1);
+      border-color: rgba(231, 76, 60, 0.3);
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background: rgba(231, 76, 60, 0.2);
+    }
+    .btn-success {
+      background: var(--success);
+      color: var(--bg);
+      font-weight: 600;
+    }
+    .btn-success:hover {
+      filter: brightness(1.1);
+    }
+
+    main {
+      padding: 32px;
+      flex: 1;
+      background: var(--bg);
+    }
+
+    /* Global UI Components */
+    .view-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .view-panel.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    /* Pills & Badges */
+    .pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .pill-red {
+      background: rgba(231, 76, 60, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(231, 76, 60, 0.25);
+    }
+    .pill-amber {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .pill-blue {
+      background: rgba(45, 141, 232, 0.1);
+      color: var(--accent-bright);
+      border: 1px solid rgba(45, 141, 232, 0.25);
+    }
+    .pill-green {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .pill-gold {
+      background: rgba(201, 146, 42, 0.1);
+      color: var(--gold);
+      border: 1px solid rgba(201, 146, 42, 0.25);
+    }
+    .pill-muted {
+      background: rgba(122, 149, 176, 0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(122, 149, 176, 0.25);
+    }
+
+    /* Grid layout utilities */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    @media (max-width: 1024px) {
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Stat Cards */
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-strip {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .stat-card-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .stat-card-value {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+    }
+    .stat-icon {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 20px;
+      opacity: 0.3;
+    }
+
+    /* 1. Dashboard Specific Styles */
+    .columns-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .columns-row { grid-template-columns: 1fr; }
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .card-title-row h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* Case Items Styles */
+    .case-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(12, 19, 32, 0.4);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .case-item-row:hover {
+      background: var(--hover);
+      border-color: var(--accent);
+    }
+    .case-info-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .case-id-code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-bright);
+    }
+    .case-title-txt {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .case-meta-txt {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .case-tag-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Progress bars */
+    .progress-group {
+      margin-bottom: 16px;
+    }
+    .progress-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .progress-bar-track {
+      height: 6px;
+      background: var(--surface);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+
+    /* Accordions/Expanding Agents on Lobby Network */
+    .agent-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      background: rgba(12, 19, 32, 0.2);
+    }
+    .agent-status-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .agent-circle-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: #fff;
+    }
+
+    /* 3. Intake Form Styles */
+    .steps-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding: 0 12px;
+    }
+    .step-node {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .step-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .step-node.active .step-circle {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #fff;
+    }
+    .step-node.completed .step-circle {
+      background: var(--success);
+      border-color: var(--success);
+      color: var(--bg);
+    }
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 16px;
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .step-node.active .step-label {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .info-banner-blue {
+      background: rgba(29, 111, 184, 0.08);
+      border: 1px solid rgba(29, 111, 184, 0.2);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
+    /* Form Fields Styling */
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group-full {
+      grid-column: 1 / -1;
+    }
+    label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: rgba(7, 12, 20, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      padding: 10px 14px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 0 2px rgba(45, 141, 232, 0.15);
+    }
+    textarea {
+      resize: vertical;
+    }
+
+    /* Tag pill fields inside intake */
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(7, 12, 20, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 42px;
+      align-items: center;
+    }
+    .framework-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .framework-tag span {
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .framework-tag span:hover {
+      color: var(--danger);
+    }
+    .add-tag-trigger {
+      font-size: 11px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .add-tag-trigger:hover {
+      color: var(--accent-bright);
+      border-color: var(--accent-bright);
+    }
+
+    .form-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    .consent-box-container {
+      background: rgba(29, 111, 184, 0.03);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .consent-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .consent-row input {
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+      cursor: pointer;
+    }
+    .consent-text {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .form-action-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* 4. Agent Room View */
+    .agent-header-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1200px) {
+      .agent-header-strip {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    .agent-room-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+    }
+    .agent-room-card.active {
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 10px rgba(45, 141, 232, 0.15);
+    }
+    .agent-room-details h4 {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .agent-room-details p {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .agent-status-pill {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      display: inline-block;
+      line-height: 1.2;
+    }
+    .agent-status-pill.done {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .agent-status-pill.active {
+      background: rgba(45, 141, 232, 0.1);
+      color: var(--accent-bright);
+      border: 1px solid rgba(45, 141, 232, 0.3);
+      animation: pulse 1.5s infinite;
+    }
+    .agent-status-pill.queued {
+      background: rgba(122, 149, 176, 0.08);
+      color: var(--text-muted);
+      border: 1px solid rgba(122, 149, 176, 0.15);
+    }
+
+    /* Deliberation Chat Timeline */
+    .deliberation-container {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .deliberation-container { grid-template-columns: 1fr; }
+    }
+
+    .timeline-feed {
+      position: relative;
+      padding-left: 20px;
+    }
+    .timeline-feed::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 10px;
+      bottom: 20px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .timeline-entry {
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .timeline-entry-avatar {
+      position: absolute;
+      left: -28px;
+      top: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      z-index: 5;
+    }
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .timeline-agent-name {
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .timeline-timestamp {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .timeline-bubble {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
+    /* Message specific borders and layouts */
+    .timeline-entry.triage-type .timeline-bubble {
+      border-left: 3px solid var(--teal);
+      background: rgba(14, 159, 138, 0.02);
+    }
+    .timeline-entry.analysis-type .timeline-bubble {
+      border-left: 3px solid var(--danger);
+      background: rgba(231, 76, 60, 0.02);
+    }
+    .timeline-entry.policy-type .timeline-bubble {
+      border-left: 3px solid var(--warning);
+      background: rgba(245, 158, 11, 0.02);
+    }
+    .timeline-entry.challenge-type .timeline-bubble {
+      border: 1px solid var(--gold);
+      background: rgba(201, 146, 42, 0.03);
+    }
+    .timeline-entry.response-type .timeline-bubble {
+      border-left: 3px solid var(--accent-bright);
+    }
+    .timeline-entry.action-type .timeline-bubble {
+      border-left: 3px solid var(--success);
+      background: rgba(16, 185, 129, 0.02);
+    }
+    .timeline-entry.directive-type .timeline-bubble {
+      border: 1px solid #9b59b6;
+      background: rgba(155, 89, 182, 0.03);
+    }
+
+    /* Right Column Summary inside Deliberation Room */
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .summary-property-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(28, 46, 66, 0.5);
+      padding: 10px 0;
+      font-size: 12.5px;
+    }
+    .summary-property-row:last-child {
+      border-bottom: none;
+    }
+    .summary-prop-label {
+      color: var(--text-muted);
+    }
+    .summary-prop-val {
+      font-weight: 500;
+    }
+
+    /* 5. Reports View Styles */
+    .view-tabs-header {
+      display: flex;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      padding: 8px 16px 12px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      border-radius: 0;
+    }
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+    .tab-btn.active {
+      color: var(--accent-bright);
+      border-bottom-color: var(--accent-bright);
+    }
+
+    .report-tab-panel {
+      display: none;
+    }
+    .report-tab-panel.active {
+      display: block;
+    }
+
+    /* Expandable Accordions in Partial Reports */
+    .accordion-card {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .accordion-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s ease;
+    }
+    .accordion-header:hover {
+      background: var(--hover);
+    }
+    .accordion-header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .accordion-header-title {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    .accordion-header-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+    .accordion-content {
+      padding: 0 24px;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease-in-out;
+      border-top: 1px solid transparent;
+    }
+    .accordion-card.open .accordion-content {
+      padding: 20px 24px;
+      max-height: 1000px;
+      border-top-color: var(--border);
+    }
+    .accordion-card .chevron-icon {
+      transition: transform 0.2s ease;
+    }
+    .accordion-card.open .chevron-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Holistic Compliance Report Tab */
+    .holistic-memo-frame {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #09101a;
+      overflow: hidden;
+    }
+    .memo-gradient-banner {
+      background: linear-gradient(135deg, #101a28 0%, #0d1e33 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px;
+    }
+    .memo-content {
+      padding: 32px;
+    }
+    .memo-warning-strip {
+      background: rgba(245, 158, 11, 0.05);
+      border: 1.5px solid rgba(245, 158, 11, 0.25);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .memo-section {
+      margin-bottom: 28px;
+    }
+    .memo-section-heading {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .memo-section p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    /* Risk Grid / Matrix tab */
+    .risk-grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .risk-grid-container { grid-template-columns: 1fr; }
+    }
+    .risk-matrix-cell {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.2s ease;
+    }
+    .risk-matrix-cell:hover {
+      transform: translateY(-2px);
+    }
+    .risk-cell-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .risk-cell-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .risk-cell-subtext {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* 6. Sign-off Queue View */
+    .signoff-panel {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .signoff-header-block {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .signoff-scale-ring {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px dashed var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 20px;
+      color: var(--gold);
+    }
+
+    /* 7. Audit Ledger View */
+    .audit-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .audit-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(12, 19, 32, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 12px;
+    }
+    .audit-row-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .audit-timestamp {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      min-width: 130px;
+    }
+    .audit-description {
+      color: var(--text-primary);
+    }
+    .audit-hash {
+      font-family: var(--font-mono);
+      color: var(--teal);
+      font-size: 11px;
+    }
+
+    /* Diagnostics Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(7, 12, 20, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 650px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transform: scale(0.95);
+      transition: transform 0.25s ease;
+    }
+    .modal-overlay.show .modal-card {
+      transform: scale(1);
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .diagnostic-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .diagnostic-table th, .diagnostic-table td {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .diagnostic-table th {
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--text-primary);
+      padding: 12px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      font-size: 12.5px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast.success {
+      border-color: var(--success);
+    }
+    .toast.warning {
+      border-color: var(--warning);
+    }
+    .toast.info {
+      border-color: var(--accent);
+    }
+
+    /* Keyframes */
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shimmer-active {
+      box-shadow: 0 0 10px rgba(45, 141, 232, 0.1);
+    }
+
+    /* HR Advisory Styles */
+    .agent-avatar.hr {
+      background: linear-gradient(135deg, #1e1b4b, #4338ca);
+    }
+
+    .pill-indigo {
+      background: rgba(67, 56, 202, 0.15);
+      color: #818cf8;
+      border: 1px solid rgba(67, 56, 202, 0.3);
+    }
+
+    .tl-advisory {
+      border-color: rgba(67, 56, 202, 0.3);
+      background: rgba(67, 56, 202, 0.05);
+    }
+
+    /* HR Advisory status pill */
+    .agent-status-pill.advisory {
+      background: rgba(67,56,202,0.15);
+      color: #818cf8;
+      border: 1px solid rgba(67,56,202,0.3);
+    }
+
+    /* RACI table */
+    .raci-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .raci-table th {
+      background: var(--bg-surface);
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--txt-muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .raci-table th:first-child,
+    .raci-table th:nth-child(2),
+    .raci-table th:nth-child(3) {
+      text-align: left;
+    }
+    .raci-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      vertical-align: middle;
+    }
+    .raci-table td:first-child { font-family: var(--mono); font-weight: 700; font-size: 11px; text-align: left; }
+    .raci-table td:nth-child(2){ font-weight: 500; color: var(--txt-primary); text-align: left; }
+    .raci-table td:nth-child(3){ color: var(--txt-muted); font-size: 11px; text-align: left; }
+    .raci-table tr:nth-child(even) td { background: var(--bg-hover); }
+    .raci-table tr:hover td { background: rgba(45,141,232,0.05); }
+    .raci-table td.dash { color: var(--txt-muted); }
+
+    .pill-R { background: rgba(45,141,232,.15); color: var(--accent-bright); border: 1px solid rgba(45,141,232,.3); font-weight: 700; }
+    .pill-A { background: rgba(201,146,42,.15); color: var(--gold-light);    border: 1px solid rgba(201,146,42,.3); font-weight: 700; }
+    .pill-C { background: rgba(14,159,138,.12); color: var(--teal);          border: 1px solid rgba(14,159,138,.3); font-weight: 700; }
+    .pill-I { background: rgba(100,130,160,.1); color: var(--txt-secondary); border: 1px solid var(--border);        font-weight: 700; }
+
+    .raci-legend {
+      display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .raci-legend-item {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt-secondary);
+    }
+
+    .escalation-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--txt-secondary); line-height: 1.5;
+    }
+    .escalation-row:last-child { border-bottom: none; }
+    .escalation-row::before { content: '⚠'; color: var(--warn-light); flex-shrink: 0; margin-top: 1px; }
+
+    .confirm-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .confirm-row:last-child { border-bottom: none; }
+    .confirm-info { display: flex; flex-direction: column; gap: 2px; }
+    .confirm-name { font-weight: 600; color: var(--txt-primary); }
+    .confirm-role { font-size: 11px; color: var(--txt-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar Navigation -->
+  <aside>
+    <div class="logo-container">
+      <div class="logo">
+        <span class="logo-emoji">🛡️</span>
+        <div class="logo-text">
+          <h1>CareGuard</h1>
+          <p>Compliance Workspace</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="band-sync-badge">
+      <div class="badge-dot"></div>
+      <span class="badge-text">Band.ai — 6 agents online</span>
+    </div>
+
+    <nav>
+      <!-- Overview Section -->
+      <div class="nav-section">
+        <p class="nav-section-title">Overview</p>
+        <span class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span>Dashboard</span>
+          </div>
+        </span>
+        <span class="nav-item" id="nav-cases" onclick="switchView('cases')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/></svg>
+            <span>Active Cases</span>
+          </div>
+          <span class="nav-badge danger" id="badge-cases-count">4</span>
+        </span>
+      </div>
+
+      <!-- Workflow Section -->
+      <div class="nav-section">
+        <p class="nav-section-title">Workflow</p>
+        <span class="nav-item" id="nav-intake" onclick="switchView('intake')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>New Intake</span>
+          </div>
+        </span>
+        <span class="nav-item" id="nav-room" onclick="switchView('room')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+            <span>Agent Room</span>
+          </div>
+          <span class="nav-badge live">Live</span>
+        </span>
+        <span class="nav-item" id="nav-reports" onclick="switchView('reports')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <span>Reports</span>
+          </div>
+        </span>
+        <span class="nav-item" id="nav-raci" onclick="switchView('raci')">
+          <div class="nav-item-left">
+            <span style="font-size: 14px; font-weight: bold; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;">⊗</span>
+            <span>RACI Matrix</span>
+          </div>
+        </span>
+        <span class="nav-item" id="nav-signoff" onclick="switchView('signoff')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <span>Sign-off Queue</span>
+          </div>
+          <span class="nav-badge amber" id="badge-signoff-count">2</span>
+        </span>
+      </div>
+
+      <!-- Records Section -->
+      <div class="nav-section">
+        <p class="nav-section-title">Records</p>
+        <span class="nav-item" id="nav-ledger" onclick="switchView('ledger')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <span>Audit Ledger</span>
+          </div>
+        </span>
+        <span class="nav-item" id="nav-network" onclick="switchView('network')">
+          <div class="nav-item-left">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <span>Agent Network</span>
+          </div>
+        </span>
+      </div>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatar-circle">CM</div>
+      <div class="user-info">
+        <div class="user-name">Case Manager</div>
+        <div class="user-role">Compliance Director</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Workspace Area -->
+  <div class="main-wrapper">
+    <header>
+      <div class="header-title-area">
+        <p class="header-breadcrumb" id="header-breadcrumb">Workspace / Dashboard</p>
+        <h2 id="header-title">Compliance Dashboard</h2>
+      </div>
+      <div class="header-actions">
+        <button class="btn-ghost" onclick="toggleDiagnosticsModal(true)">⚡ Diagnostics</button>
+        <button class="btn-primary" onclick="switchView('intake')">+ New Case</button>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- 1. DASHBOARD VIEW -->
+      <div id="view-dashboard" class="view-panel active">
+        <!-- Stats Cards Grid -->
+        <div class="grid-4" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div class="stat-strip" style="background: var(--danger);"></div>
+            <div class="stat-card-title">Critical Cases</div>
+            <div class="stat-card-value">02</div>
+            <div class="stat-icon" style="color: var(--danger);">🚨</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-strip" style="background: var(--warning);"></div>
+            <div class="stat-card-title">Under Review</div>
+            <div class="stat-card-value">04</div>
+            <div class="stat-icon" style="color: var(--warning);">⏳</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-strip" style="background: var(--success);"></div>
+            <div class="stat-card-title">Resolved (30d)</div>
+            <div class="stat-card-value">11</div>
+            <div class="stat-icon" style="color: var(--success);">✅</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-strip" style="background: var(--gold);"></div>
+            <div class="stat-card-title">Pending Sign-off</div>
+            <div class="stat-card-value">02</div>
+            <div class="stat-icon" style="color: var(--gold);">⚖️</div>
+          </div>
+        </div>
+
+        <div class="columns-row">
+          <!-- Active Cases Row -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>Priority Cases Awaiting Supervision</h3>
+              <span class="pill pill-gold">Live Feed</span>
+            </div>
+            <div id="dashboard-cases-container">
+              <!-- Rendered Dynamically via JS -->
+            </div>
+          </div>
+
+          <!-- Network & Risk distribution -->
+          <div class="card">
+            <div class="card-title-row" style="margin-bottom: 16px;">
+              <h3>Psychosocial Risk Profile</h3>
+              <span class="pill pill-muted">L1 Matrix</span>
+            </div>
+            <div style="margin-bottom: 24px;">
+              <div class="progress-group">
+                <div class="progress-label-row">
+                  <span>Systemic Psychosocial Stress</span>
+                  <span style="color: var(--danger);">42%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 42%; background-color: var(--danger);"></div>
+                </div>
+              </div>
+              <div class="progress-group">
+                <div class="progress-label-row">
+                  <span>Bullying & Harassment Vector</span>
+                  <span style="color: var(--warning);">28%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 28%; background-color: var(--warning);"></div>
+                </div>
+              </div>
+              <div class="progress-group">
+                <div class="progress-label-row">
+                  <span>Overwork & Fatigue Index</span>
+                  <span style="color: var(--accent-bright);">20%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 20%; background-color: var(--accent-bright);"></div>
+                </div>
+              </div>
+              <div class="progress-group">
+                <div class="progress-label-row">
+                  <span>Physical Workspace Hazard</span>
+                  <span style="color: var(--success);">10%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 10%; background-color: var(--success);"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mini Agent list in dashboard -->
+            <div class="card-title-row" style="margin-bottom: 12px; margin-top: 10px;">
+              <h3>Agent Cluster Monitor</h3>
+            </div>
+            <div id="dashboard-agent-monitor">
+              <!-- Handled in script -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ACTIVE CASES VIEW -->
+      <div id="view-cases" class="view-panel">
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom: 20px;">
+            <h3>Durable Organisational Risk Ledger</h3>
+            <span class="pill pill-green">🔒 HIPAA compliant</span>
+          </div>
+          <div id="cases-list-container">
+            <!-- Full case rows list rendered dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. NEW INTAKE VIEW -->
+      <div id="view-intake" class="view-panel">
+        <div class="steps-indicator">
+          <div class="step-node active" id="step1-node">
+            <div class="step-circle">1</div>
+            <span class="step-label">Draft Case Draft</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node" id="step2-node">
+            <div class="step-circle">2</div>
+            <span class="step-label">Lobby Consensus</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node" id="step3-node">
+            <div class="step-circle">3</div>
+            <span class="step-label">Workspace Active</span>
+          </div>
+        </div>
+
+        <div class="info-banner-blue">
+          <span style="font-size: 18px;">🛡️</span>
+          <div>
+            <strong>CareGuard Non-Repudiation Encryption Protocols:</strong>
+            All inputs submitted here undergo automated multi-agent triage, severity validation, legal risk analysis, and policy audit. Direct identifiers are scrambled dynamically into compliant, anonymized reference states before being logged into the secure Band.ai workspace.
+          </div>
+        </div>
+
+        <div class="card">
+          <form id="intake-incident-form" onsubmit="handleFormSubmission(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Case Referral Code</label>
+                <input type="text" value="CG-2026-009" disabled style="background-color: var(--surface); color: var(--text-muted); cursor: not-allowed;">
+              </div>
+              <div class="form-group">
+                <label>Incident Registration Date</label>
+                <input type="date" id="intake-date" required>
+              </div>
+              <div class="form-group">
+                <label>Target Industry Sector</label>
+                <select id="intake-sector" required>
+                  <option value="">-- Click to select --</option>
+                  <option value="Mining">Mining & Heavy Resources</option>
+                  <option value="Construction">Construction & Engineering</option>
+                  <option value="Healthcare">Healthcare & Primary Care</option>
+                  <option value="Emergency Services">Emergency Services & Paramedics</option>
+                  <option value="Police">Police & Tactical Response</option>
+                  <option value="Military">Defense Force / Military</option>
+                  <option value="Corrections">Corrections & Security Institutions</option>
+                  <option value="Mental Health">Mental Health / Therapeutic Teams</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Affected Employee Operational Role</label>
+                <input type="text" id="intake-role" placeholder="e.g. Senior Mine Ventilation Supervisor" required>
+              </div>
+              <div class="form-group">
+                <label>Policy Risk Classification</label>
+                <select id="intake-classification" required>
+                  <option value="">-- Click to select classification --</option>
+                  <option value="Psychosocial Wellbeing">Psychosocial Wellbeing Threat</option>
+                  <option value="Bullying/Harassment">Bullying / Hostile Supervision</option>
+                  <option value="Systemic Overwork">Systemic Fatigue / Roster Danger</option>
+                  <option value="Physical Safety Hazard">Physical Safety Compromise</option>
+                  <option value="Workplace Violence">Workplace Violence / Intimidation</option>
+                  <option value="PTSD/Trauma Exposure">Cumulative Trauma Exposure / PTSD</option>
+                  <option value="Moral Injury">Moral Injury / Directive Non-Compliance</option>
+                  <option value="Discrimination">Protected Attribute Discrimination</option>
+                  <option value="Retaliation/Whistleblower">Retaliation on Disclosing Whistleblower</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Risk Severity Determination</label>
+                <select id="intake-severity" required>
+                  <option value="Critical">Critical (Immediate Redaction & Isolation)</option>
+                  <option value="Elevated">Elevated (Deliberation Required within 4h)</option>
+                  <option value="Moderate">Moderate (Active Roster Audit)</option>
+                  <option value="Low">Low (Continuous Ambient Sync)</option>
+                </select>
+              </div>
+              <div class="form-group form-group-full">
+                <label>Incident Manifest and Risk Details</label>
+                <textarea id="intake-description" rows="5" placeholder="Specify full circumstantial variables. Identify dates, supervisory interfaces, and operational pressures..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label>Workplace Site / Location</label>
+                <input type="text" id="intake-location" placeholder="e.g. Alpha Shaft, Queensland Block 4" required>
+              </div>
+              <div class="form-group">
+                <label>Legislative Framework Tags</label>
+                <div class="tag-container" id="intake-framework-tags">
+                  <div class="framework-tag">ISO 45003:2021</div>
+                  <div class="framework-tag">WHS Act 2011</div>
+                  <div class="framework-tag">Duty of Care</div>
+                  <div class="framework-tag">ILO C155</div>
+                  <div class="framework-tag">EAP Framework</div>
+                  <div class="framework-tag">Fair Work Act</div>
+                  <button type="button" class="add-tag-trigger" onclick="addNewFrameworkTag()">+ Add</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-divider"></div>
+
+            <div class="consent-box-container">
+              <label class="consent-row">
+                <input type="checkbox" required>
+                <span class="consent-text">I command the immediate engagement of automated multi-agent risk screening and tactical isolation planning.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" required>
+                <span class="consent-text">I authorize the EAP Tier 2 allocations and supervisor decoupling parameters within the case management workflow.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" required>
+                <span class="consent-text">I confirm that all registered circumstances comply with standard Work Health & Safety section 28 standard definitions of organisational compliance.</span>
+              </label>
+            </div>
+
+            <div class="form-action-row">
+              <button type="button" class="btn-ghost" onclick="switchView('dashboard')">Save Draft</button>
+              <button type="submit" class="btn-primary">Submit & Activate Agent Room →</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 4. AGENT ROOM VIEW -->
+      <div id="view-room" class="view-panel">
+        <div class="agent-header-strip" id="room-agent-row">
+          <!-- 5 agent status boxes, rendered dynamically via JS -->
+        </div>
+
+        <div class="deliberation-container">
+          <!-- Timeline chat feed -->
+          <div class="card">
+            <div class="card-title-row" style="margin-bottom: 24px;">
+              <h3>Live Deliberation — <span id="deliberation-case-code">Case #CG-2026-001</span></h3>
+              <span class="pill pill-blue" style="animation: pulse 1.8s infinite;">Multiplex Active</span>
+            </div>
+            <div class="timeline-feed" id="deliberation-timeline">
+              <!-- Rendered Dynamically from array of 7 messages -->
+            </div>
+          </div>
+
+          <!-- Sidebar case variables panel -->
+          <div class="summary-card">
+            <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 16px; text-transform: uppercase;">Compliance Metadata</h3>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Case Identifier</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); font-weight:700;" id="sum-case-id">CG-2026-001</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Risk Severity</span>
+              <span class="pill pill-red" id="sum-severity">Critical</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Policy Violation</span>
+              <span class="summary-prop-val" id="sum-classification">Psychosocial Risk</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Org Sector</span>
+              <span class="summary-prop-val" id="sum-sector">Emergency Services</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Active Deliberation</span>
+              <span class="summary-prop-val" style="color: var(--accent-bright);" id="sum-stage">Challenge Stage</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Legal Liability Exposure</span>
+              <span class="pill pill-red" id="sum-exposure">HIGH RISK MATRIX</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">EAP Coverage Tier</span>
+              <span class="pill pill-blue" id="sum-eap">T2 Authorized</span>
+            </div>
+
+            <div style="margin-top: 24px;">
+              <h4 style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px;">Active Compliance Guidelines</h4>
+              <div class="tag-container" style="border-color: var(--border);" id="sum-framework-tags">
+                <div class="framework-tag">ISO 45003:2021</div>
+                <div class="framework-tag">WHS Act 2011</div>
+                <div class="framework-tag">Duty of Care</div>
+                <div class="framework-tag">ILO C155</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 28px; display: flex; flex-direction: column; gap: 10px;">
+              <button class="btn-primary" style="justify-content: center;" onclick="generateHolisticReport()">Compile Holistic Report</button>
+              <button class="btn-ghost" style="justify-content: center; border-color: var(--gold); color: var(--gold);" onclick="switchView('signoff')">Review & Sign Off</button>
+              <button class="btn-ghost" style="justify-content: center;" onclick="switchView('network')">Open Remote Portal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. REPORTS VIEW -->
+      <div id="view-reports" class="view-panel">
+        <div class="view-tabs-header">
+          <button class="tab-btn active" onclick="switchReportTab('partial')">Partial Reports (Per Agent)</button>
+          <button class="tab-btn" id="holistic-report-tab-btn" onclick="switchReportTab('holistic')">Holistic Compliance Report</button>
+          <button class="tab-btn" onclick="switchReportTab('matrix')">Risk Matrix</button>
+        </div>
+
+        <!-- Tab 1: Partial Reports -->
+        <div id="rep-partial" class="report-tab-panel active">
+          <div id="partial-reports-container">
+            <!-- Rendered accordion structures via JS -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Holistic Climate Memo -->
+        <div id="rep-holistic" class="report-tab-panel">
+          <div class="holistic-memo-frame">
+            <div class="memo-gradient-banner">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                  <span class="pill pill-red" style="margin-bottom: 10px;" id="memo-top-pill">Critical Severity Isolation</span>
+                  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;" id="memo-header-title">COOPERATIVE MULTI-AGENT COMPLIANCE ANALYSIS</h3>
+                  <p style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);" id="memo-header-meta">MEMO ID: CG-2281-99 | REGISTERED ON: 2026-06-12 14:02:44</p>
+                </div>
+                <span class="pill pill-gold" style="font-weight: 700;">DRAFT FOR HUMAN SIGN-OFF</span>
+              </div>
+            </div>
+
+            <div class="memo-content">
+              <div class="memo-section">
+                <div class="memo-section-heading">1. Executive Summary</div>
+                <p>This organizational compliance evaluation is compiled collaboratively through direct peer analysis in the secure Band.ai environment. It provides real-time audit coverage and supervisor-decoupling recommendations following a critical mental stress and safety breach reported on Emergency Response Block B. The multi-agent workspace confirms high baseline exposure vector under standard legislation guidelines (WHS 2011/ISO 45003).</p>
+              </div>
+
+              <div class="memo-section">
+                <div class="memo-section-heading">2. Severity and Incident Classification</div>
+                <p>The incident reported represents a cumulative and immediate psychosocial safety compromise of elevated severity. Initial triage records confirm systemic fatigue coupled with localized hostile supervision dynamics. The case meets the threshold for critical risk status following statutory guidelines which necessitate instant intervention (Safe Work Australia, ISO 45003 §6.3).</p>
+              </div>
+
+              <div class="memo-section">
+                <div class="memo-section-heading">3. Legal and Regulatory Exposure</div>
+                <p>The legal compliance agent warns of compounding organisational liability vectors. In the absence of an active Fatigue Risk Management System (FRMS) and failure to execute local supervisor-decoupling protocol, the risk parameters rise into statutory breach territory with maximum workplace litigation vulnerability starting from AUD $150,000 to prosecution up to $3M under primary WHS general duty of care provisions.</p>
+              </div>
+
+              <div class="memo-section">
+                <div class="memo-section-heading">4. Policy and Employee Assistance Assessment</div>
+                <p>The policy alignment engine confirms a formal breach of Corporate Bylaw Clause 4.7 (Safe Supervision Guidelines). System triggers have been cleared, confirming immediate clearance for Tier 2 wellness guidelines: authorizing immediate 12-session Employee Assistance Program (EAP) coverage with direct regional psychologist consultation vouchers.</p>
+              </div>
+
+              <div class="memo-section">
+                <div class="memo-section-heading">5. Recommended Compliance Pathway</div>
+                <p>The wellness coordinator and primary navigator outlines a mandatory 5-point wellness intervention timeline:
+                  <br>• <strong>Immediate (0-48 Hours)</strong>: Complete administrative relief and mandatory rest period.
+                  <br>• <strong>Short-Term (48-96 Hours)</strong>: Establish formal roster isolation and supervisor separation triggers.
+                  <br>• <strong>Systemic</strong>: Direct supervisor to complete localized mental health training module and initiate continuous 90-day progress monitoring.
+                </p>
+              </div>
+
+              <div class="memo-section">
+                <div class="memo-section-heading">6. Challenge Phase Audit record</div>
+                <p>During peer calibration stage, the Director (Compliance Director) challenged the safety and legal agents regarding fatigue risk logs. Peer validation verified that fatigue parameters represent a critical systemic failure, certifying the baseline risk score as critical. Debate successfully closed and memo archived into Sign-off Queue.</p>
+              </div>
+
+              <div class="memo-warning-strip">
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <span style="font-size: 24px;">⚖️</span>
+                  <div>
+                    <h4 style="font-size: 13px; font-weight: 600; color: var(--gold);">Compliance Certification Pending</h4>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">This document must undergo manual reviewer sign-off to be legally stored in the non-repudiation audit ledger.</p>
+                  </div>
+                </div>
+                <button class="btn-primary" style="background-color: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 700;" onclick="switchView('signoff')">Go to Sign-Off Queue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Risk Matrix -->
+        <div id="rep-matrix" class="report-tab-panel">
+          <div class="risk-grid-container">
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--danger);">
+              <span class="risk-cell-header">Legal Exposure</span>
+              <span class="risk-cell-value" style="color: var(--danger);">HIGH 9/10</span>
+              <span class="risk-cell-subtext">Litigation vulnerability vector activated under WHS General Duty.</span>
+            </div>
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--danger);">
+              <span class="risk-cell-header">Physiological Risk</span>
+              <span class="risk-cell-value" style="color: var(--danger);">HIGH 8/10</span>
+              <span class="risk-cell-subtext">Severe cognitive overload related to persistent fatigue vectors.</span>
+            </div>
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--warning);">
+              <span class="risk-cell-header">Policy Breach</span>
+              <span class="risk-cell-value" style="color: var(--warning);">CONFIRMED</span>
+              <span class="risk-cell-subtext">Validated breach of Corporate Bylaw Clause 4.7 framework.</span>
+            </div>
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--danger);">
+              <span class="risk-cell-header">Safety Risk Vector</span>
+              <span class="risk-cell-value" style="color: var(--danger);">HIGH 8/10</span>
+              <span class="risk-cell-subtext">Elevated operational incident threat on primary active worksite.</span>
+            </div>
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--accent-bright);">
+              <span class="risk-cell-header">EAP Coverage</span>
+              <span class="risk-cell-value" style="color: var(--accent-bright); font-family: var(--font-mono);">TIER 2 READY</span>
+              <span class="risk-cell-subtext">Immediate 12-session psychologist vouchers cleared for dispatch.</span>
+            </div>
+            <div class="risk-matrix-cell" style="border-top: 3px solid var(--success);">
+              <span class="risk-cell-header">Interventions</span>
+              <span class="risk-cell-value" style="color: var(--success);">READY</span>
+              <span class="risk-cell-subtext">5 active containment protocols mapped and queued for deployment.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RACI MATRIX VIEW -->
+      <div id="view-raci" class="view-panel">
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom: 8px;">
+            <h3 style="font-size: 16px; font-weight: 600;">Case #CG-2024 · RACI — HR Advisory output</h3>
+            <span class="pill pill-indigo">⊗ RACI Matrix</span>
+          </div>
+          
+          <div class="info-banner-blue" style="background: rgba(67, 56, 202, 0.08); border: 1px solid rgba(67, 56, 202, 0.2); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 12.5px; line-height: 1.5; color: #818cf8;">
+            <span style="font-size: 18px;">💡</span>
+            <div>
+              Generated by <strong>@hr-advisory</strong> · Consultative model · Each action requires Accountable owner confirmation before execution · Last updated 09:25:12
+            </div>
+          </div>
+
+          <!-- RACI Legend Rows -->
+          <div class="raci-legend">
+            <div class="raci-legend-item">
+              <span class="pill pill-R" style="font-size: 10px; padding: 2px 6px;">R</span>
+              <span><strong>Responsible (blue):</strong> Does the work</span>
+            </div>
+            <div class="raci-legend-item">
+              <span class="pill pill-A" style="font-size: 10px; padding: 2px 6px;">A</span>
+              <span><strong>Accountable (gold):</strong> Owns the outcome, gives final approval</span>
+            </div>
+            <div class="raci-legend-item">
+              <span class="pill pill-C" style="font-size: 10px; padding: 2px 6px;">C</span>
+              <span><strong>Consulted (teal):</strong> Input sought before action, two-way communication</span>
+            </div>
+            <div class="raci-legend-item">
+              <span class="pill pill-I" style="font-size: 10px; padding: 2px 6px;">I</span>
+              <span><strong>Informed (muted):</strong> Notified after action, one-way communication</span>
+            </div>
+          </div>
+
+          <!-- RACI Table wrapper to allow horizontal scrolling on small screens -->
+          <div style="overflow-x: auto; margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px;">
+            <table class="raci-table">
+              <thead>
+                <tr>
+                  <th>Step</th>
+                  <th>Action</th>
+                  <th>Timeline</th>
+                  <th>HR Manager</th>
+                  <th>Case Manager</th>
+                  <th>Safety Officer</th>
+                  <th>Legal / Compliance</th>
+                  <th>Site Supervisor</th>
+                  <th>EAP Provider</th>
+                  <th>WorkSafe / Regulator</th>
+                  <th>Affected Individual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>S1</td>
+                  <td>Direct HR contact & rights briefing</td>
+                  <td>0–24h</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-C">C</span></td>
+                </tr>
+                <tr>
+                  <td>S2</td>
+                  <td>Supervisor decoupling & reporting realignment</td>
+                  <td>0–24h</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-I">I</span></td>
+                </tr>
+                <tr>
+                  <td>S3</td>
+                  <td>EAP Tier 2 referral activation</td>
+                  <td>0–48h</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-C">C</span></td>
+                </tr>
+                <tr>
+                  <td>S4</td>
+                  <td>Safety Committee systemic briefing (FRMS gap)</td>
+                  <td>24–72h</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-I">I</span></td>
+                </tr>
+                <tr>
+                  <td>S5</td>
+                  <td>WorkSafe notification draft preparation</td>
+                  <td>48–96h</td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td class="dash">—</td>
+                </tr>
+                <tr>
+                  <td>S6</td>
+                  <td>Structured welfare check</td>
+                  <td>72h</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-C">C</span></td>
+                </tr>
+                <tr>
+                  <td>S7</td>
+                  <td>Return-to-work plan co-design</td>
+                  <td>Post-rest</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-A">A</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-R">R</span></td>
+                </tr>
+                <tr>
+                  <td>S8</td>
+                  <td>Fortnightly welfare monitoring cadence</td>
+                  <td>90 days</td>
+                  <td><span class="pill pill-R">R</span></td>
+                  <td><span class="pill pill-I">I</span></td>
+                  <td><span class="pill pill-C">C</span></td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td class="dash">—</td>
+                  <td><span class="pill pill-C">C</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="grid-2">
+            <!-- Left Card: Escalation Triggers -->
+            <div class="card" style="background: rgba(12, 19, 32, 0.4); margin-bottom: 0;">
+              <h4 style="font-size: 13.5px; font-weight: 600; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span>⚠</span> Auto-Escalation Conditions
+              </h4>
+              <div class="escalation-row">Any Step marked R not actioned within its timeline window → auto-alert to Accountable owner</div>
+              <div class="escalation-row">Welfare check reveals fatigue markers → re-escalate to Case Manager, re-open CareGuard case</div>
+              <div class="escalation-row">Individual reports distress between check-ins → EAP Provider notified, Case Manager alerted</div>
+              <div class="escalation-row">WorkSafe notification not submitted within 48h of sign-off → Legal flagged as overdue</div>
+              <div class="escalation-row">Supervisor decoupling contested by site management → Escalate to Board Safety Committee</div>
+            </div>
+
+            <!-- Right Card: Stakeholder Consent Log -->
+            <div class="card" style="background: rgba(12, 19, 32, 0.4); margin-bottom: 0;">
+              <h4 style="font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">✓ Stakeholder Confirmation Status</h4>
+              
+              <div class="confirm-row">
+                <div class="confirm-info">
+                  <span class="confirm-name">HR Manager</span>
+                  <span class="confirm-role">Primary Actioner</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="confirm-pill-hr-manager" class="pill pill-muted">Pending</span>
+                  <button class="btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="confirmStakeholder(this, 'hr-manager')">Confirm</button>
+                </div>
+              </div>
+
+              <div class="confirm-row">
+                <div class="confirm-info">
+                  <span class="confirm-name">Case Manager</span>
+                  <span class="confirm-role">Accountable Owner</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="confirm-pill-case-manager" class="pill pill-muted">Pending</span>
+                  <button class="btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="confirmStakeholder(this, 'case-manager')">Confirm</button>
+                </div>
+              </div>
+
+              <div class="confirm-row">
+                <div class="confirm-info">
+                  <span class="confirm-name">WorkSafe Regulator</span>
+                  <span class="confirm-role">External Oversight</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="confirm-pill-worksafe" class="pill pill-muted">Pending</span>
+                  <button class="btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="confirmStakeholder(this, 'worksafe')">Confirm</button>
+                </div>
+              </div>
+
+              <div class="confirm-row">
+                <div class="confirm-info">
+                  <span class="confirm-name">Site Supervisor</span>
+                  <span class="confirm-role">Roster Compliance</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="confirm-pill-site-supervisor" class="pill pill-muted">Pending</span>
+                  <button class="btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="confirmStakeholder(this, 'site-supervisor')">Confirm</button>
+                </div>
+              </div>
+
+              <div class="confirm-row">
+                <div class="confirm-info">
+                  <span class="confirm-name">Affected Individual</span>
+                  <span class="confirm-role">Care Recipient</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="confirm-pill-affected" class="pill pill-muted">Pending</span>
+                  <button class="btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="confirmStakeholder(this, 'affected')">Confirm</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Row -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+            <div style="display: flex; gap: 12px;">
+              <button class="btn-ghost" onclick="toast('info', 'Exporting Responsibility Matrix as PDF...')">⬇ Export RACI as PDF</button>
+              <button class="btn-ghost" onclick="toast('info', 'Exporting Responsibility Matrix as Excel...')">⬇ Export RACI as Excel</button>
+            </div>
+            <button class="btn-primary" onclick="switchView('signoff')">→ Proceed to Sign-off</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. SIGN-OFF QUEUE VIEW -->
+      <div id="view-signoff" class="view-panel">
+        <div class="signoff-panel">
+          <div class="signoff-header-block">
+            <div class="signoff-scale-ring">⚖️</div>
+            <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">Human Review & Compliance Sign-Off</h2>
+            <p style="font-size: 11.5px; font-family: var(--font-mono); color: var(--text-muted);">PENDING MANIFEST: CASE CG-2026-001</p>
+          </div>
+
+          <!-- Recommendation Block -->
+          <div class="card" style="background-color: var(--surface); border-color: var(--border);">
+            <h4 style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; color: var(--gold);">Taskforce Directive Overviews</h4>
+            <div style="font-size: 13px; line-height: 1.5; color: var(--text-primary); display: flex; flex-direction: column; gap: 8px;">
+              <p>• Establish instant <strong>Supervisor Separation Trigger</strong> in Block B Roster roster.</p>
+              <p>• Authorize <strong>Tier 2 psychologist and employee EAP vouchers</strong>.</p>
+              <p>• Initiate <strong>Fatigue Audit parameters</strong> with localized 90-day surveillance protocols.</p>
+            </div>
+          </div>
+
+          <!-- Mod Block -->
+          <div class="card">
+            <h4 style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 16px;">Case Manager Modifications</h4>
+            <div class="grid-2" style="margin-bottom: 16px;">
+              <div class="form-group">
+                <label>Review Override Severity</label>
+                <select id="signoff-severity-override">
+                  <option value="Critical">Keep Critical (Redaction Enforced)</option>
+                  <option value="Elevated">Downgrade to Elevated</option>
+                  <option value="Moderate">Downgrade to Moderate</option>
+                  <option value="Low">Downgrade to Ambient Log</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>EAP Voucher Tier Allocation</label>
+                <select id="signoff-eap-override">
+                  <option value="Tier2">Keep Welfare Tier 2 (12-session vouchers)</option>
+                  <option value="Tier3">Upgrade to Welfare Tier 3 (20-session vouchers)</option>
+                  <option value="Tier1">Downgrade to Welfare Tier 1 (6-session vouchers)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Review Executive Decisions & Audit Notes</label>
+              <textarea id="signoff-reviewer-notes" rows="3" placeholder="Append structural annotations or managerial explanations to the permanent ledger..."></textarea>
+            </div>
+          </div>
+
+          <!-- HR Advisory Action Plan Status Card -->
+          <div class="card" style="border-left: 4px solid var(--indigo);">
+            <div class="card-title-row" style="margin-bottom: 12px;">
+              <h4 style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Advisory Action Plan Consensus</h4>
+              <span id="signoff-advisory-status-pill" class="pill pill-amber">Pending Consensus</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.4; margin-bottom: 0;">
+              This status tracks the alignment between the Case Manager, HR Manager, Affected Individual, Site Supervisor, and external regulatory bodies. Consensus can be certified below when administrative alignments are secured.
+            </p>
+          </div>
+
+          <!-- Digital Confirmation Checkboxes (Must toggle all to confirm sign-off) -->
+          <div class="card" style="border-color: rgba(201, 146, 42, 0.3);">
+            <h4 style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold); margin-bottom: 14px;">Regulatory Sign-off Certifications</h4>
+            <div class="consent-box-container" style="background-color: transparent;">
+              <label class="consent-row">
+                <input type="checkbox" class="signoff-checkbox" id="signoff-check-1">
+                <span class="consent-text" style="color: var(--text-primary);">I affirm I have audited the multi-agent deliberation logs in their cryptographic entirety.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" class="signoff-checkbox" id="signoff-check-2">
+                <span class="consent-text" style="color: var(--text-primary);">I confirm supervisor-decoupling controls are integrated within active roster schedules.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" class="signoff-checkbox" id="signoff-check-3">
+                <span class="consent-text" style="color: var(--text-primary);">I authorize immediate EAP vouchers and localized protective isolations.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" class="signoff-checkbox" id="signoff-check-4">
+                <span class="consent-text" style="color: var(--text-primary);">I command these guidelines be permanently archived inside the non-repudiation ledger.</span>
+              </label>
+              <label class="consent-row">
+                <input type="checkbox" class="signoff-checkbox" id="signoff-check-advisory" onchange="updateAdvisorySignoffStatus()">
+                <span class="consent-text" style="color: var(--text-primary);">I certify that the @hr-advisory consultative action plan has been co-designed with stakeholders, RACI responsibilities confirmed, and individual consent registered.</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 14px; margin-bottom: 40px;">
+            <button class="btn-ghost" onclick="switchView('room')">Return to Room</button>
+            <button class="btn-danger" onclick="executeReworkTrigger()">Request Rework</button>
+            <button class="btn-success" style="flex: 1; justify-content: center;" onclick="executeSignOffAndSeal()">Sign Off & Seal Ledger ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. AUDIT LEDGER VIEW -->
+      <div id="view-ledger" class="view-panel">
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <h3 style="font-size: 15px; font-weight: 600;">Secure Compliance Audit Trail</h3>
+              <span class="pill pill-green">🔒 Cryptographically Sealed</span>
+            </div>
+            <button class="btn-ghost" style="padding: 4px 10px; font-size: 11px;" onclick="exportAuditLog()">Export Log</button>
+          </div>
+
+          <div class="audit-grid" id="audit-trail-container">
+            <!-- Rendered in JS, incorporates pre-populated data and has space for a 9th dynamic human review stamp -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. AGENT NETWORK VIEW -->
+      <div id="view-network" class="view-panel">
+        <!-- Grid layout -->
+        <div class="grid-2">
+          <!-- Connection Settings -->
+          <div class="card">
+            <div class="card-title-row" style="margin-bottom: 20px;">
+              <h3>Band.ai Integration Protocol</h3>
+              <span class="pill pill-green">Active</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Synchronous Protocol</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono);">REST-HTTPS / Webhook</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Band Portal Workspace ID</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); color: var(--accent-bright);">0a133bf6-psychosocial-risk-review</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">API Auth Status</span>
+              <span class="pill pill-green">Authenticated</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Sandbox Heartbeat</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); color: var(--success); font-weight: 500;">Live (4s ago)</span>
+            </div>
+            <div style="margin-top: 24px;">
+              <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="window.open('https://app.band.ai/', '_blank')">Open Remote Portal</button>
+            </div>
+          </div>
+
+          <!-- Session Stats -->
+          <div class="card">
+            <div class="card-title-row" style="margin-bottom: 20px;">
+              <h3>Live Workspace Metrics</h3>
+              <span class="pill pill-muted">Lobby Analytics</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Total Cases Triaged</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); font-weight: 600;">32 Cases</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Simultaneous Deliberations</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); font-weight: 600;">04 Active</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Challenges Resolved</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); font-weight: 600;">11 Audited</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Average Multi-Agent Time (SLA)</span>
+              <span class="summary-prop-val" style="font-family: var(--font-mono); font-weight: 600;">1.8 Minutes</span>
+            </div>
+            <div class="summary-property-row">
+              <span class="summary-prop-label">Consensus Convergence Rate</span>
+              <span class="summary-prop-val" style="color: var(--success); font-weight: 600; font-family: var(--font-mono);">96.4%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom: 24px;">
+            <h3>Connected Active Compliance Agents (Secure Sandbox)</h3>
+            <span class="pill pill-green">6 ONLINE</span>
+          </div>
+          <div id="full-agent-network-list">
+            <!-- Filled dynamically in JS using the agent network template -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Diagnostics Modal Overlay -->
+  <div class="modal-overlay" id="diagnostics-modal" onclick="handleDiagnosticsOverlayClick(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚡ CareGuard Multi-Agent Connection Health</h3>
+        <button class="modal-close-btn" onclick="toggleDiagnosticsModal(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="band-sync-badge" style="margin: 0 0 20px 0; background: rgba(16, 185, 129, 0.08); width: 100%;">
+          <div class="badge-dot"></div>
+          <span class="badge-text">All 6 compliance agents successfully authenticated on secure port 3000.</span>
+        </div>
+        <table class="diagnostic-table">
+          <thead>
+            <tr>
+              <th>Agent Resource</th>
+              <th>Endpoint Connection</th>
+              <th>Latency</th>
+              <th>Authentication</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight: 600;">Triage Sentinel</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/triage</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">42ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Risk Analytics Engine</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/risk</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">48ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Policy Guard</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/policy</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">51ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Core Navigator</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/navigation</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">57ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Compliance Review Director</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/compliance</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">61ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">HR Advisory</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">https://app.band.ai/api/hr-advisory</td>
+              <td style="font-family: var(--font-mono); color: var(--success);">45ms</td>
+              <td><span class="pill pill-green" style="font-size: 8px; padding: 2px 6px;">OK</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="display: flex; justify-content: flex-end;">
+          <button class="btn-primary" onclick="toggleDiagnosticsModal(false)">Close Diagnostic Panel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-bin"></div>
+
+  <!-- Javascript -->
+  <script>
+    // Initial Cases Database (Provides durable compliance variables across navigation targets)
+    const CASES_DATABASE = [
+      {
+        id: "CG-2026-001",
+        title: "Finance Dept: Sudden Absenteeism & Psychological Safety",
+        subtitle: "Corporate Operations · Stage: Challenge Mode Active",
+        severity: "Critical",
+        stage: "Challenge",
+        classification: "Psychosocial Wellbeing",
+        sector: "Corporate Operations",
+        legalExposure: "HIGH / WHS BREACH RISK",
+        eapCoverage: "T2 Authorized",
+        frameworks: ["ISO 45003:2021", "WHS Act 2011", "Duty of Care"],
+        hasSignOff: false
+      },
+      {
+        id: "CG-2026-002",
+        title: "Tunnel Vent Alpha: Systemic Fatigue Threat",
+        subtitle: "Mining Block 4 · Active multi-agent screening",
+        severity: "Elevated",
+        stage: "Deliberating",
+        classification: "Systemic Overwork",
+        sector: "Mining",
+        legalExposure: "ELEVATED RISK SCORE",
+        eapCoverage: "T2 Authorized",
+        frameworks: ["WHS Act 2011", "ISO 45003:2021", "ILO C155"],
+        hasSignOff: false
+      },
+      {
+        id: "CG-2025-081",
+        title: "Conflict of Interest Decoupling & Moral Injury",
+        subtitle: "Defense Sector Joint Tactical Hub · Sealed secure protocol",
+        severity: "Moderate",
+        stage: "Sealed",
+        classification: "Moral Injury",
+        sector: "Military",
+        legalExposure: "MINIMAL EXPOSURE",
+        eapCoverage: "T1 Standard",
+        frameworks: ["Duty of Care", "Moral Injury Pathway"],
+        hasSignOff: true
+      },
+      {
+        id: "CG-2025-104",
+        title: "Post-Traumatic Stress Exposure Support Pathway",
+        subtitle: "County Emergency Response Team Block B · Sign-off Ready",
+        severity: "Critical",
+        stage: "Sign-off",
+        classification: "PTSD/Trauma Exposure",
+        sector: "Emergency Services",
+        legalExposure: "HIGH EXPOSURE SCENARIO",
+        eapCoverage: "T2 Critical Response",
+        frameworks: ["ISO 45003:2021", "Duty of Care", "EAP Framework"],
+        hasSignOff: false
+      },
+      {
+        id: "CG-2026-004",
+        title: "Supervisor Retaliation Protection Protocol",
+        subtitle: "Alpha Operations Hub · Deliberation complete",
+        severity: "Elevated",
+        stage: "Triage",
+        classification: "Retaliation/Whistleblower",
+        sector: "Construction",
+        legalExposure: "VULNERABILITY UNDER REVIEW",
+        eapCoverage: "T2 Authorized",
+        frameworks: ["Fair Work Act", "Duty of Care"],
+        hasSignOff: false
+      },
+      {
+        id: "CG-2026-005",
+        title: "Intense shift Roster Stress & Burnout Evaluation",
+        subtitle: "Metro Trauma Unit Ward C · Ambient data log",
+        severity: "Low",
+        stage: "Deliberating",
+        classification: "Systemic Overwork",
+        sector: "Healthcare",
+        legalExposure: "MONITORED EXPOSURE",
+        eapCoverage: "T1 Standard",
+        frameworks: ["WHS Act 2011", "ILO C155"],
+        hasSignOff: false
+      }
+    ];
+
+    // Current cases displayed currently inside active list (6 items total)
+    let dynamicCases = [...CASES_DATABASE];
+
+    // Chosen Case loaded into Agent Room & Sign-off Panel
+    let activeCaseId = "CG-2026-001";
+
+    // 6 Agents definitions
+    const COMPLIANCE_AGENTS = [
+      { id: "triage", initials: "TS", name: "Triage Sentinel", role: "Severity & Classification", status: "Done", color: "#0e9f8a", desc: "Maps baseline regulatory scopes." },
+      { id: "risk", initials: "RA", name: "Risk Analytics", role: "Legal & Liability Exposure", status: "Active", color: "#2d8de8", desc: "Calculates litigation exposure profiles." },
+      { id: "policy", initials: "PG", name: "Policy Guard", role: "Policy & EAP Alignment", status: "Active", color: "#10b981", desc: "Cross-checks bylaw directories." },
+      { id: "navigator", initials: "CN", name: "Core Navigator", role: "Wellness & Action Plans", status: "Queued", color: "#c9922a", desc: "Coordinates localized wellness schedules." },
+      { id: "director", initials: "CD", name: "Review Director", role: "Challenge & Final Memo", status: "Queued", color: "#9b59b6", desc: "Issues peer calibrations and memo compiles." },
+      { id: "hr", initials: "HR", name: "HR Advisory", role: "Consultative Action Planning", status: "Queued", color: "linear-gradient(135deg, #1e1b4b, #4338ca)", desc: "Proposes executing step-by-step resolution pathways and RACI matrix." }
+    ];
+
+    // Deliberation timeline 7 logs in perfect chronological sequence
+    const ROOM_TIMELINE_MESSAGES = [
+      {
+        agent: "Triage Sentinel",
+        initials: "TS",
+        color: "#0e9f8a",
+        time: "09:14:32",
+        type: "Triage",
+        typeClass: "triage-type",
+        text: "<strong>Case Intake Redaction Scan Clear.</strong> Verified baseline reporting markers: 1. Cumulative stress vectors detected on active Shift roster, 2. Hostile supervisor management report. Baseline severity determined as <strong>CRITICAL</strong> under ISO 45003 §6.3 parameters. Directing case profile to active Risk & Duty analysis models."
+      },
+      {
+        agent: "Risk Analytics",
+        initials: "RA",
+        color: "#2d8de8",
+        time: "09:16:11",
+        type: "Analysis",
+        typeClass: "analysis-type",
+        text: "<strong>Legal Liability calculations complete.</strong> System flags structural vulnerability vector under WHS Act 2011 Duty provisions. Estimated monetary exposure models suggest statutory fine vulnerability ranging from <strong>$150,000 to prosecution limits of $3,000,000</strong> on organization if immediate fatigue rest schedules and supervisor-decoupling guidelines are not integrated. Workers compensation liability multipliers assessed at 3.2x baseline."
+      },
+      {
+        agent: "Policy Guard",
+        initials: "PG",
+        color: "#10b981",
+        time: "09:17:44",
+        type: "Policy Checklist",
+        typeClass: "policy-type",
+        text: "<strong>Corporate Protocol Alignment Audited.</strong> Incident context triggers direct breach of Clause 4.7 internal compliance guidelines. System clears direct clearance pathways for instant <strong>Tier 2 Welfare interventions</strong>: authorizing the dispatch of 12-session psychologist vouchers and activating localized roster decoupling buffers. Regionally validated under current Emergency services directives."
+      },
+      {
+        agent: "Review Director",
+        initials: "CD",
+        color: "#9b59b6",
+        time: "09:19:05",
+        type: "Challenge Issued",
+        typeClass: "challenge-type",
+        text: "<strong>Debate Room Stage - Peer Calibration Commenced.</strong><br>• Requesting <span style='font-family: var(--font-mono); color: var(--accent-bright); font-size:11px;' onclick='scrollAndHighlightAgent(\"risk\")'>@risk-analytics-engine</span>: Clarify if roster fatigue checks are verified in existing FRMS tracking or represents system-wide omission.<br>• Requesting <span style='font-family: var(--font-mono); color: var(--success); font-size:11px;' onclick='scrollAndHighlightAgent(\"policy\")'>@policy-guard</span>: Is EAP partner insurer clearance verified for active 12-session psychology limits?"
+      },
+      {
+        agent: "Risk Analytics",
+        initials: "RA",
+        color: "#2d8de8",
+        time: "09:20:18",
+        type: "Peer Response",
+        typeClass: "response-type",
+        text: "<strong>Addressing @review-decision-director:</strong> FRMS registers no active monitoring record for the subject work group in the last 180 days. This absence represents a major additional organizational liability multiplier, not a mitigant. Baseline risk levels are certified as critical. Roster shift separation parameters remain mandatory."
+      },
+      {
+        agent: "Core Navigator",
+        initials: "CN",
+        color: "#c9922a",
+        time: "09:21:55",
+        type: "Action Plan",
+        typeClass: "action-type",
+        text: "<strong>Wellness Containment Protocol structured:</strong><br>1. Enforce 48-hour immediate roster isolation; <br>2. Dispatch EAP Welfare vouchers immediately; <br>3. Relocate operational reporting target from Block B supervisor; <br>4. Run fatigue-compliance schema check on the Block roster; <br>5. Establish weekly wellness tracking for the next 90 days."
+      },
+      {
+        agent: "Review Director",
+        initials: "CD",
+        color: "#9b59b6",
+        time: "09:23:40",
+        type: "Directive Compile",
+        typeClass: "directive-type",
+        text: "<strong>Peer Calibration Consensus Solved.</strong> General consensus compiled: Risk factors validated, decoupling authorized, EAP authorized. Interactive draft compliance memo formulated and exported to the Human Sign-off Queue. Case locked."
+      },
+      {
+        agent: "HR Advisory",
+        initials: "HR",
+        color: "linear-gradient(135deg, #1e1b4b, #4338ca)",
+        time: "09:25:12",
+        type: "HR Advisory",
+        typeClass: "hr-type",
+        text: `<strong>Consultative advisory received. Step-by-step action plan follows.</strong><br><br>Having reviewed all peer assessments and the Director's consolidated memo, I am proposing the following collaborative resolution pathway for case manager confirmation. This plan is consultative — each step requires stakeholder agreement before execution.<br><br><strong>Immediate Actions (0–24h):</strong><br>• <strong>Step 1</strong> — HR Manager contacts the affected individual directly and confidentially to confirm understanding of rights and available support. No operational manager involvement at this stage.<br>• <strong>Step 2</strong> — Activate the supervisor decoupling protocol as recommended by @core-navigator. HR coordinates temporary reporting realignment — this is not punitive to the supervisor; it is a protective measure for the affected individual.<br>• <strong>Step 3</strong> — EAP referral letter prepared and delivered to the individual by HR. Delivery method confirmed with individual (email, physical, or in-person hand-off).<br><br><strong>Short-Term (24–72h):</strong><br>• <strong>Step 4</strong> — HR convenes a confidential briefing with the site Safety Committee (no line managers present). Purpose: share the systemic finding (FRMS gap) and initiate the roster audit without attributing blame to individuals.<br>• <strong>Step 5</strong> — HR prepares the WorkSafe notification draft in consultation with the legal team. No submission until case manager signs off.<br>• <strong>Step 6</strong> — HR schedules a structured welfare check with the affected individual — not a performance review, a supported conversation.<br><br>Responsibility Matrix generated. See RACI tab in Reports for the full matrix. Each step has an assigned Responsible party, Accountable owner, Consulted stakeholders, and Informed parties. No step proceeds without the Accountable owner's confirmation.`
+      }
+    ];
+
+    // 8 Pre-populated Audit Trails
+    let AUDIT_TRAILS = [
+      { id: "A1", time: "2026-06-12 13:58:12", desc: "Workplace psychosocial intake CG-2026-001 submitted via Case Manager", hash: "8b7fa1d0" },
+      { id: "A2", time: "2026-06-12 14:02:44", desc: "Triage Sentinel verified critical risk status, registered regulatory classifications", hash: "991e2af1" },
+      { id: "A3", time: "2026-06-12 14:05:10", desc: "Risk Analytics model completed legal exposure assessment ($150k-$3M fine liability registered)", hash: "b55928d2" },
+      { id: "A4", time: "2026-06-12 14:07:33", desc: "Policy Guard validated internal policy breach (Clause 4.7) and authorized EAP Tier 2 allocations", hash: "e2aef629" },
+      { id: "A5", time: "2026-06-12 14:11:02", desc: "Review Director initiated room-calibration debate stage and issued formal peer challenges", hash: "d7bcf140" },
+      { id: "A6", time: "2026-06-12 14:14:50", desc: "Risk Analytics submitted validation records clarifying fatigue database absence", hash: "ca55910f" },
+      { id: "A7", time: "2026-06-12 14:18:22", desc: "Core Navigator compiled 5-point tactical welfare pathway separation timeline", hash: "f328a6c8" },
+      { id: "A8", time: "2026-06-12 14:22:15", desc: "Review Director compiled final multi-agent compliance memo and locked Sign-off Queue entry", hash: "da4501a3" }
+    ];
+
+    // Switch View Panel
+    function switchView(target) {
+      document.querySelectorAll('.view-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      const activePanel = document.getElementById(`view-${target}`);
+      const activeNav = document.getElementById(`nav-${target}`);
+
+      if (activePanel) activePanel.classList.add('active');
+      if (activeNav) activeNav.classList.add('active');
+
+      // Update Header Area info
+      const titleElement = document.getElementById('header-title');
+      const breadcrumbElement = document.getElementById('header-breadcrumb');
+
+      let textTitle = "CareGuard Workspace";
+      let textBread = "Workspace";
+
+      switch (target) {
+        case 'dashboard':
+          textTitle = "Compliance Dashboard";
+          textBread = "Workspace / Dashboard";
+          break;
+        case 'cases':
+          textTitle = "Durable Risk Cases";
+          textBread = "Workspace / Active Cases";
+          break;
+        case 'intake':
+          textTitle = "New Incident Intake Form";
+          textBread = "Workflow / New Intake";
+          break;
+        case 'room':
+          textTitle = "Multi-Agent Deliberation Room";
+          textBread = "Workflow / Agent Room";
+          break;
+        case 'reports':
+          textTitle = "Compliance Reports Ledger";
+          textBread = "Workflow / Reports";
+          break;
+        case 'raci':
+          textTitle = "Consultative RACI Matrix";
+          textBread = "Workflow / RACI Matrix";
+          break;
+        case 'signoff':
+          textTitle = "Case Sign-Off Panel";
+          textBread = "Workflow / Sign-off Queue";
+          break;
+        case 'ledger':
+          textTitle = "Cryptographic Audit Ledger";
+          textBread = "Records / Audit Ledger";
+          break;
+        case 'network':
+          textTitle = "AI Hub Agent Cluster Directory";
+          textBread = "Records / Agent Network";
+          break;
+      }
+
+      titleElement.textContent = textTitle;
+      breadcrumbElement.textContent = textBread;
+
+      // Handle custom dynamic views render
+      if (target === 'dashboard') {
+        renderDashboardCases();
+        renderDashboardAgentMonitor();
+      } else if (target === 'cases') {
+        renderFullCasesView();
+      } else if (target === 'room') {
+        renderAgentHeaderStrip();
+        renderTimeline();
+      } else if (target === 'reports') {
+        renderPartialAccordions();
+      } else if (target === 'ledger') {
+        renderAuditLedger();
+      } else if (target === 'network') {
+        renderFullAgentNetwork();
+      }
+    }
+
+    // Modal Display Controls
+    function toggleDiagnosticsModal(show) {
+      const modal = document.getElementById('diagnostics-modal');
+      if (show) {
+        modal.classList.add('show');
+      } else {
+        modal.classList.remove('show');
+      }
+    }
+
+    function handleDiagnosticsOverlayClick(e) {
+      if (e.target.id === 'diagnostics-modal') {
+        toggleDiagnosticsModal(false);
+      }
+    }
+
+    // Dynamic Render Elements
+    function renderDashboardCases() {
+      const container = document.getElementById('dashboard-cases-container');
+      container.innerHTML = '';
+
+      // Slice priority cases for dashboard (max 4 cases display)
+      const dashboardList = dynamicCases.filter(c => c.stage !== 'Sealed').slice(0, 4);
+
+      dashboardList.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'case-item-row';
+        row.setAttribute('id', `dash-case-${c.id}`);
+        row.onclick = () => loadCaseAndRedirect(c.id);
+
+        let badgeClass = 'pill-red';
+        if (c.severity === 'Elevated') badgeClass = 'pill-amber';
+        if (c.severity === 'Moderate') badgeClass = 'pill-blue';
+        if (c.severity === 'Low') badgeClass = 'pill-green';
+
+        let stageClass = 'pill-blue';
+        if (c.stage === 'Sign-off') stageClass = 'pill-gold';
+        if (c.stage === 'Sealed') stageClass = 'pill-green';
+        if (c.stage === 'Triage') stageClass = 'pill-amber';
+
+        row.innerHTML = `
+          <div class="case-info-group">
+            <span class="case-id-code">${c.id}</span>
+            <span class="case-title-txt">${c.title}</span>
+            <span class="case-meta-txt">${c.sector} · ${c.classification}</span>
+          </div>
+          <div class="case-tag-pills">
+            <span class="pill ${badgeClass}">${c.severity}</span>
+            <span class="pill ${stageClass}">${c.stage}</span>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderDashboardAgentMonitor() {
+      const monitor = document.getElementById('dashboard-agent-monitor');
+      monitor.innerHTML = '';
+
+      COMPLIANCE_AGENTS.forEach(ag => {
+        const row = document.createElement('div');
+        row.className = 'agent-status-row';
+        row.setAttribute('id', `dash-agent-${ag.id}`);
+
+        let agClass = ag.status === 'Active' ? 'active' : (ag.status === 'Done' ? 'done' : 'queued');
+
+        row.innerHTML = `
+          <div class="agent-status-left">
+            <div class="agent-circle-avatar" style="background:${ag.color}">${ag.initials}</div>
+            <div>
+              <div style="font-size:12.5px; font-weight:600;">${ag.name}</div>
+              <div style="font-size:10.5px; color:var(--text-muted);">${ag.role}</div>
+            </div>
+          </div>
+          <span class="agent-status-pill ${agClass}">${ag.status}</span>
+        `;
+        monitor.appendChild(row);
+      });
+    }
+
+    function renderFullCasesView() {
+      const container = document.getElementById('cases-list-container');
+      container.innerHTML = '';
+
+      dynamicCases.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'case-item-row';
+        row.setAttribute('id', `cases-list-${c.id}`);
+        row.onclick = () => loadCaseAndRedirect(c.id);
+
+        let badgeClass = 'pill-red';
+        if (c.severity === 'Elevated') badgeClass = 'pill-amber';
+        if (c.severity === 'Moderate') badgeClass = 'pill-blue';
+        if (c.severity === 'Low') badgeClass = 'pill-green';
+
+        let stageClass = 'pill-blue';
+        if (c.stage === 'Sign-off') stageClass = 'pill-gold';
+        if (c.stage === 'Sealed') stageClass = 'pill-green';
+        if (c.stage === 'Triage') stageClass = 'pill-amber';
+
+        row.innerHTML = `
+          <div class="case-info-group">
+            <span class="case-id-code">${c.id}</span>
+            <span class="case-title-txt" style="font-size:14px; font-weight:600;">${c.title}</span>
+            <span class="case-meta-txt">${c.subtitle}</span>
+          </div>
+          <div class="case-tag-pills">
+            <span class="pill ${badgeClass}">${c.severity}</span>
+            <span class="pill ${stageClass}">${c.stage}</span>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderAgentHeaderStrip() {
+      const row = document.getElementById('room-agent-row');
+      row.innerHTML = '';
+
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId) || dynamicCases[0];
+
+      COMPLIANCE_AGENTS.forEach(ag => {
+        const card = document.createElement('div');
+        card.className = 'agent-room-card';
+        card.setAttribute('id', `agent-room-card-${ag.id}`);
+
+        let agStatus = ag.status;
+        if (currentCase.stage === 'Sealed') {
+          agStatus = "Done";
+        }
+
+        let agClass = agStatus === 'Active' ? 'active' : (agStatus === 'Done' ? 'done' : 'queued');
+        if (agStatus === 'Active') {
+          card.classList.add('active');
+        }
+
+        card.innerHTML = `
+          <div class="agent-circle-avatar" style="background:${ag.color}; width:32px; height:32px; font-size:12px;">${ag.initials}</div>
+          <div class="agent-room-details">
+            <h4>${ag.name}</h4>
+            <p>${ag.role}</p>
+            <span class="agent-status-pill ${agClass}">${agStatus}</span>
+          </div>
+        `;
+        row.appendChild(card);
+      });
+    }
+
+    function renderTimeline() {
+      const timeline = document.getElementById('deliberation-timeline');
+      timeline.innerHTML = '';
+
+      ROOM_TIMELINE_MESSAGES.forEach((item, index) => {
+        const entry = document.createElement('div');
+        entry.className = `timeline-entry ${item.typeClass}`;
+        entry.setAttribute('id', `timeline-item-${index}`);
+
+        entry.innerHTML = `
+          <div class="timeline-entry-avatar" style="background:${item.color};"></div>
+          <div class="timeline-header">
+            <span class="timeline-agent-name" style="color:${item.color};">${item.agent}</span>
+            <span class="timeline-timestamp">${item.time}</span>
+            <span class="pill" style="font-size:8px; padding:2px 6px; background: rgba(28,46,66,0.5);">${item.type}</span>
+          </div>
+          <div class="timeline-bubble">
+            ${item.text}
+          </div>
+        `;
+        timeline.appendChild(entry);
+      });
+    }
+
+    function renderPartialAccordions() {
+      const container = document.getElementById('partial-reports-container');
+      container.innerHTML = '';
+
+      const accordionContents = [
+        {
+          id: "sentinel-acc",
+          handle: "@triage-sentinel",
+          title: "Severity & Classification Report",
+          pillClass: "pill-red",
+          pillText: "Critical Severity",
+          body: `<strong>Incident Triage Analysis:</strong><br>
+                 After processing the incident input of reported workplace bullying, supervisor hostility, and systemic fatigue indexes, the Triage Sentinel model confirms a severe and active psychosocial threat.<br><br>
+                 <strong>Determinations & Escalations:</strong><br>
+                 • <strong>Triage Severity Threshold</strong>: Critical Risk metrics validated in accordance with ISO 45003 guidelines.<br>
+                 • <strong>Active Legislative Classifications</strong>: Psychosocial Wellbeing Threat, Bullying / Harassment Vector, and Systemic Fatigue Risk.<br>
+                 • <strong>Critical Safeguard Trigger</strong>: Automated redirection from direct managerial surveillance lines is required immediately. Relocate subject employee from Block B operations schedule.`
+        },
+        {
+          id: "risk-acc",
+          handle: "@remote-analytic-engine",
+          title: "Legal & Liability Exposure Analysis",
+          pillClass: "pill-red",
+          pillText: "High Legal Exposure",
+          body: `<strong>Statutory Exposure Profile:</strong><br>
+                 The Legal Risk engine has cross-audited operational registers of active supervisor rosters. Due to the absence of a verified Fatigue Risk Management System (FRMS) and Failure to protect direct psychosocial comfort, deep legislative vulnerability is logged.<br><br>
+                 <strong>Direct Exposures Mapped:</strong><br>
+                 • <strong>WHS Breach Threat</strong>: High baseline breach vulnerability under standard Work Health & Safety Act general duty protocols.<br>
+                 • <strong>Litigation Vulnerability Metrics</strong>: Estimates project statutory mitigation litigation bounds starting from <strong>AUD $150,000 to prosecution up to $3,000,000</strong> on primary parameters.<br>
+                 • <strong>Workers Compensation Danger</strong>: Estimated compensation claim probability evaluated at 3.2x baseline industry levels.`
+        },
+        {
+          id: "policy-acc",
+          handle: "@policy-guard",
+          title: "Internal Policy & EAP Alignment Memo",
+          pillClass: "pill-amber",
+          pillText: "Clause 4.7 Breach",
+          body: `<strong>Internal Corporate Compliance Policy Check:</strong><br>
+                 Workplace circumstances trigger direct violation profiles of Corporate Bylaw §4.7 (Protected supervisory limits and mental wellbeing). Compliance audit recommends active quarantine boundaries.<br><br>
+                 <strong>Resolution & Employee Assistance clearance guidelines:</strong><br>
+                 • <strong>EAP Intervention Cleared</strong>: Immediate 12-session Employee Assistance Program with dedicated regional psychologist support tokens.<br>
+                 • <strong>Supervisor Decoupling Boundary</strong>: Administrative triggers must decouple supervisor schedule from the employee during pending review.`
+        },
+        {
+          id: "navigator-acc",
+          handle: "@core-navigator",
+          title: "Tactical Wellness Pathway & Action Plan",
+          pillClass: "pill-blue",
+          pillText: "5 Containment Plans",
+          body: `<strong>Actionable Support Logistics:</strong><br>
+                 Outline of the mandatory wellness and operational relief timeline generated for Case Lead approval:<br><br>
+                 1. <strong>Roster Separation (Immediate 0-48h)</strong>: Relief from active shift responsibilities on Block B.<br>
+                 2. <strong>Welfare Token Dispatch (Immediate 24h)</strong>: Immediate counselor coordination with EAP Tier 2 vouchers.<br>
+                 3. <strong>Operational Supervisor Separation</strong>: Setting system decoupling schedule limits in schedule logs.<br>
+                 4. <strong>Systemic Fatigue Audit</strong>: Target localized roster parameters for high shift fatigue vectors.<br>
+                 5. <strong>Surveillance Logs</strong>: Execute ambient weekly wellness status check-ins for 90 days.`
+        },
+        {
+          id: "hr-acc",
+          handle: "@hr-advisory",
+          title: "Consultative Action Plan & RACI Report",
+          pillClass: "pill-indigo",
+          pillText: "Proposal Pending Approval",
+          body: `<strong>Consultative Action Resolution Scheme:</strong><br>
+                 This advisory report introduces a structured workplace resolution pathway co-designed with key organizational stakeholders. Transitioning from the unilateral directive models, the HR Advisory proposes human-centered administrative checks and collaborative responsibility matrices.<br><br>
+                 <strong>Pathway Milestones Mapped:</strong><br>
+                 • <strong>0–24 Hours</strong>: Confidentially briefing the affected individual regarding rights and support lanes. Initiate safe temporary reporting decoupling protocols (Block B).<br>
+                 • <strong>24–72 Hours</strong>: Brief safety committees on roster FRMS omissions without blaming individuals. Prepare external regulatory drafts.<br>
+                 • <strong>72 Hours Onwards</strong>: Facilitate structured welfare checkups and a collaborative return-to-work design process.<br>
+                 • <strong>RACI Execution Safety</strong>: Full Responsibility Assignment Matrix is configured inside the <strong>RACI Matrix View</strong>. No operational steps are executed without human stakeholder alignment.`
+        }
+      ];
+
+      accordionContents.forEach(acc => {
+        const element = document.createElement('div');
+        element.className = 'accordion-card';
+        element.setAttribute('id', acc.id);
+
+        element.innerHTML = `
+          <div class="accordion-header" onclick="toggleAccordion('${acc.id}')">
+            <div class="accordion-header-left">
+              <span class="accordion-header-title">${acc.handle} — ${acc.title}</span>
+              <span class="pill ${acc.pillClass} accordion-header-badge">${acc.pillText}</span>
+            </div>
+            <div class="chevron-icon" style="display:flex; align-items:center;">
+              <svg fill="currentColor" width="20" height="20" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <p style="font-size:13px; line-height:1.6; margin-bottom:16px;">${acc.body}</p>
+            <div style="display:flex; justify-content:flex-end;">
+              <button class="btn-ghost" style="padding: 4px 10px; font-size:11px;" onclick="toast('success', 'Export of ${acc.handle} report initiated successfully.')">Export Section</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(element);
+      });
+    }
+
+    function toggleAccordion(id) {
+      const card = document.getElementById(id);
+      if (card) {
+        card.classList.toggle('open');
+      }
+    }
+
+    function switchReportTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.report-tab-panel').forEach(panel => panel.classList.remove('active'));
+
+      if (tab === 'partial') {
+        document.querySelector("[onclick=\"switchReportTab('partial')\"]").classList.add('active');
+        document.getElementById('rep-partial').classList.add('active');
+      } else if (tab === 'holistic') {
+        document.querySelector("[onclick=\"switchReportTab('holistic')\"]").classList.add('active');
+        document.getElementById('rep-holistic').classList.add('active');
+      } else if (tab === 'matrix') {
+        document.querySelector("[onclick=\"switchReportTab('matrix')\"]").classList.add('active');
+        document.getElementById('rep-matrix').classList.add('active');
+      }
+    }
+
+    function renderAuditLedger() {
+      const container = document.getElementById('audit-trail-container');
+      container.innerHTML = '';
+
+      AUDIT_TRAILS.forEach(row => {
+        const item = document.createElement('div');
+        item.className = 'audit-row';
+        item.setAttribute('id', `audit-item-${row.id}`);
+
+        item.innerHTML = `
+          <div class="audit-row-left">
+            <span class="audit-timestamp">${row.time}</span>
+            <span class="audit-description">${row.desc}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            ${row.badge ? `<span class="pill" style="font-size: 8px; padding: 2px 6px; font-weight: 700; background: rgba(14, 159, 138, 0.15); color: var(--teal); border: 1px solid rgba(14, 159, 138, 0.3);">${row.badge}</span>` : ''}
+            <span class="audit-hash">${row.hash}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function renderFullAgentNetwork() {
+      const container = document.getElementById('full-agent-network-list');
+      container.innerHTML = '';
+
+      COMPLIANCE_AGENTS.forEach(ag => {
+        const item = document.createElement('div');
+        item.className = 'agent-room-card';
+        item.setAttribute('id', `network-agent-${ag.id}`);
+        item.style.marginBottom = '12px';
+
+        item.innerHTML = `
+          <div class="agent-circle-avatar" style="background:${ag.color}; width:34px; height:34px; font-size:12px; font-weight:700;">${ag.initials}</div>
+          <div style="flex:1;">
+            <div class="card-title-row" style="margin-bottom:2px;">
+              <h4 style="font-size:13.5px; font-weight:600;">${ag.name}</h4>
+              <span class="pill pill-green" style="font-size:8px;">ONLINE</span>
+            </div>
+            <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:4px;">${ag.role}</p>
+            <p style="font-size:11px; color:var(--text-primary);">${ag.desc}</p>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Dynamic Navigation Controls triggered by clicking cases
+    function loadCaseAndRedirect(caseId) {
+      activeCaseId = caseId;
+      const targetCase = dynamicCases.find(c => c.id === caseId) || dynamicCases[0];
+
+      // Update room panel context variables
+      document.getElementById('deliberation-case-code').textContent = `Case #${caseId}`;
+      document.getElementById('sum-case-id').textContent = caseId;
+      document.getElementById('sum-severity').className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : (targetCase.severity === 'Elevated' ? 'pill-amber' : 'pill-blue')}`;
+      document.getElementById('sum-severity').textContent = targetCase.severity;
+      document.getElementById('sum-classification').textContent = targetCase.classification;
+      document.getElementById('sum-sector').textContent = targetCase.sector;
+      document.getElementById('sum-stage').textContent = `${targetCase.stage} Stage`;
+      
+      const exposurePill = document.getElementById('sum-exposure');
+      if (targetCase.severity === 'Critical') {
+        exposurePill.className = "pill pill-red";
+        exposurePill.textContent = "HIGH EXPOSURE";
+      } else if (targetCase.severity === 'Elevated') {
+        exposurePill.className = "pill pill-amber";
+        exposurePill.textContent = "MODERATE INDEX";
+      } else {
+        exposurePill.className = "pill pill-blue";
+        exposurePill.textContent = "LOW RISK VECTOR";
+      }
+
+      const eapPill = document.getElementById('sum-eap');
+      if (targetCase.id === 'CG-2026-001' || targetCase.severity === 'Critical') {
+        eapPill.className = "pill pill-blue";
+        eapPill.textContent = "T2 Authorized";
+      } else {
+        eapPill.className = "pill pill-green";
+        eapPill.textContent = "T1 Active";
+      }
+
+      // Sync Tag Guidelines
+      const tagsContainer = document.getElementById('sum-framework-tags');
+      tagsContainer.innerHTML = '';
+      targetCase.frameworks.forEach(t => {
+        tagsContainer.innerHTML += `<div class="framework-tag">${t}</div>`;
+      });
+
+      // Sync Holistic memo headers
+      document.getElementById('memo-top-pill').textContent = `${targetCase.severity} Severity Isolation`;
+      document.getElementById('memo-top-pill').className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : 'pill-amber'}`;
+      document.getElementById('memo-header-title').textContent = `${targetCase.classification.toUpperCase()} MULTI-AGENT COMPLIANCE ANALYSIS`;
+      document.getElementById('memo-header-meta').textContent = `MEMO ID: CG-${caseId.slice(-4)}-99 | SECTOR: ${targetCase.sector.toUpperCase()}`;
+
+      // Highlight target visual badges, then navigate to room
+      toast('info', `Swapping active workspace context to Case ${caseId}.`);
+      switchView('room');
+    }
+
+    // Interactive Action triggers
+    function generateHolisticReport() {
+      toast('info', 'Executing multi-agent compile. Gathering compliance telemetry...');
+      setTimeout(() => {
+        toast('success', 'Holistic Compliance Memo generated successfully. Shared view refreshed.');
+        switchView('reports');
+        switchReportTab('holistic');
+      }, 800);
+    }
+
+    function executeReworkTrigger() {
+      toast('warning', 'Directives returned to multi-agent cluster for adjustments. Triage calibrated.');
+      switchView('room');
+    }
+
+    function executeSignOffAndSeal() {
+      // Validate certifications checking
+      const check1 = document.getElementById('signoff-check-1').checked;
+      const check2 = document.getElementById('signoff-check-2').checked;
+      const check3 = document.getElementById('signoff-check-3').checked;
+      const check4 = document.getElementById('signoff-check-4').checked;
+      const checkAdvisory = document.getElementById('signoff-check-advisory').checked;
+
+      if (!check1 || !check2 || !check3 || !check4 || !checkAdvisory) {
+        toast('warning', 'Human sign-off blocked: All 5 regulatory checkboxes must be certified.');
+        return;
+      }
+
+      toast('info', 'Generating ledger primacy blocks. Transmitting signature hash...');
+      
+      setTimeout(() => {
+        // Change case stage dynamically 
+        const currentCase = dynamicCases.find(c => c.id === activeCaseId);
+        if (currentCase) {
+          currentCase.stage = "Sealed";
+          currentCase.hasSignOff = true;
+          currentCase.subtitle = `${currentCase.subtitle.split('·')[0]} · Cryptographic ledger sealed and certified by CM.`;
+        }
+
+        // Add 9th dynamic log to Audit Trail
+        const now = new Date();
+        const liveTimestamp = now.toISOString().replace('T', ' ').slice(0, 19);
+
+        // Check if A9-HR exists to prevent duplicates
+        const existsHR = AUDIT_TRAILS.some(e => e.id === "A9-HR");
+        if (!existsHR) {
+          AUDIT_TRAILS.push({
+            id: "A9-HR",
+            time: liveTimestamp,
+            desc: "ADVISORY CLOSED — @hr-advisory consultative action plan certified. Stakeholder consensus verified.",
+            hash: "da8a404c",
+            badge: "VERIFIED"
+          });
+        }
+
+        // Check if 9th log exists to prevent duplicates
+        const exists = AUDIT_TRAILS.some(e => e.id === "A9");
+        if (!exists) {
+          AUDIT_TRAILS.push({
+            id: "A9",
+            time: liveTimestamp,
+            desc: `HUMAN SIGN-OFF ACHIEVED — CASE ${activeCaseId} COMPLIANCE DIRECTIVE SEALED AND ARCHIVED BY reviewer (Initials: CM)`,
+            hash: "f2a6cb82"
+          });
+        }
+
+        // Update badge counts
+        document.getElementById('badge-signoff-count').textContent = "1";
+        document.getElementById('badge-cases-count').textContent = "3";
+
+        toast('success', 'Ledger primacy block successfully sealed. Transaction archived.');
+        
+        // Render audit ledger
+        if (typeof renderAuditLedger === 'function') renderAuditLedger();
+        
+        switchView('ledger');
+
+        // Reset check status
+        document.querySelectorAll('.signoff-checkbox').forEach(box => box.checked = false);
+
+        // Reset dynamic consensus status
+        if (typeof updateAdvisorySignoffStatus === 'function') updateAdvisorySignoffStatus();
+      }, 1000);
+    }
+
+    function confirmStakeholder(btn, actor) {
+      if (btn.classList.contains('confirmed')) {
+        // Already confirmed, toggle back
+        btn.classList.remove('confirmed');
+        btn.textContent = 'Confirm';
+        btn.className = 'btn-ghost';
+        btn.style.backgroundColor = 'transparent';
+        btn.style.color = 'var(--text-primary)';
+        btn.style.borderColor = 'var(--border)';
+        
+        const pill = document.getElementById(`confirm-pill-${actor}`);
+        if (pill) {
+          pill.textContent = 'Pending';
+          pill.className = 'pill pill-muted';
+        }
+        toast('info', `Stakeholder validation reset for ${actor}.`);
+      } else {
+        // Perform confirmation
+        btn.classList.add('confirmed');
+        btn.textContent = 'Confirmed ✓';
+        btn.className = 'btn-success';
+        btn.style.backgroundColor = 'var(--success)';
+        btn.style.color = 'var(--bg)';
+        btn.style.borderColor = 'var(--success)';
+        
+        const pill = document.getElementById(`confirm-pill-${actor}`);
+        if (pill) {
+          pill.textContent = 'Approved';
+          pill.className = 'pill pill-green';
+        }
+        toast('success', `Stakeholder validation certified for ${actor}.`);
+      }
+    }
+
+    function updateAdvisorySignoffStatus() {
+      const checkAdvisory = document.getElementById('signoff-check-advisory').checked;
+      const statusPill = document.getElementById('signoff-advisory-status-pill');
+      if (statusPill) {
+        if (checkAdvisory) {
+          statusPill.textContent = 'Consensus Certified';
+          statusPill.className = 'pill pill-green';
+        } else {
+          statusPill.textContent = 'Pending Consensus';
+          statusPill.className = 'pill pill-amber';
+        }
+      }
+    }
+
+    function handleFormSubmission(event) {
+      event.preventDefault();
+
+      const sector = document.getElementById('intake-sector').value;
+      const role = document.getElementById('intake-role').value;
+      const classification = document.getElementById('intake-classification').value;
+      const severity = document.getElementById('intake-severity').value;
+      const description = document.getElementById('intake-description').value;
+      const date = document.getElementById('intake-date').value || "2026-06-14";
+
+      // Register new case dynamically to database
+      const count = dynamicCases.length + 1;
+      const newId = `CG-2026-00${count}`;
+
+      const newCase = {
+        id: newId,
+        title: `${sector} Dept: ${classification} Incident Evaluation`,
+        subtitle: `${role} · Initiated on ${date}`,
+        severity: severity,
+        stage: "Triage",
+        classification: classification,
+        sector: sector,
+        legalExposure: "COMPUTING VALUE...",
+        eapCoverage: "T2 Pending",
+        frameworks: ["ISO 45003:2021", "Duty of Care"],
+        hasSignOff: false
+      };
+
+      dynamicCases.unshift(newCase);
+
+      toast('info', 'Registering intake factors into Case sandbox...');
+      
+      // Upgrade Progress Stepppers
+      const step2 = document.getElementById('step2-node');
+      const step3 = document.getElementById('step3-node');
+      
+      step2.classList.add('active');
+      
+      setTimeout(() => {
+        step3.classList.add('active');
+        toast('success', `Intake saved. Triage consensus achieved. Room #${newId} initialized.`);
+        
+        // Load target details
+        loadCaseAndRedirect(newId);
+
+        // Reset Intake view steps
+        step2.classList.remove('active');
+        step3.classList.remove('active');
+        document.getElementById('intake-incident-form').reset();
+      }, 1200);
+    }
+
+    function addNewFrameworkTag() {
+      const parent = document.getElementById('intake-framework-tags');
+      const button = parent.querySelector('.add-tag-trigger');
+      const name = prompt("Enter legislative guideline framework definition name:");
+      
+      if (name && name.trim()) {
+        const item = document.createElement('div');
+        item.className = 'framework-tag';
+        item.innerHTML = `${name.trim()} <span onclick="this.parentNode.remove()">✕</span>`;
+        parent.insertBefore(item, button);
+        toast('success', `Substituted regulatory tag "${name.trim()}".`);
+      }
+    }
+
+    // Custom Toast Management
+    function toast(type, text) {
+      const bin = document.getElementById('toast-bin');
+      const box = document.createElement('div');
+      box.className = `toast ${type}`;
+      
+      let icon = "💡";
+      if (type === 'success') icon = "✓";
+      if (type === 'warning') icon = "⚠";
+      if (type === 'info') icon = "ℹ";
+
+      box.innerHTML = `<span>${icon}</span> <span>${text}</span>`;
+      bin.appendChild(box);
+
+      // Trigger transition frame
+      setTimeout(() => box.classList.add('show'), 10);
+
+      // Auto Dismiss after 3s
+      setTimeout(() => {
+        box.classList.remove('show');
+        setTimeout(() => box.remove(), 300);
+      }, 4000);
+    }
+
+    function exportAuditLog() {
+      toast('info', 'Exporting encrypted CSV log packets...');
+      setTimeout(() => {
+        toast('success', 'Primacy audit ledger package signed and downloaded.');
+      }, 500);
+    }
+
+    // Set Init Date default value
+    document.addEventListener("DOMContentLoaded", () => {
+      const dateEl = document.getElementById('intake-date');
+      if (dateEl) {
+        const today = new Date().toISOString().split('T')[0];
+        dateEl.value = today;
+      }
+      
+      // Load Dashboard Cases first
+      renderDashboardCases();
+      renderDashboardAgentMonitor();
+    });
+  </script>
+</body>
+</html>
