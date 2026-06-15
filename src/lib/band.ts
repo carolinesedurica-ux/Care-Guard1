@@ -109,27 +109,29 @@ export class BandClient {
 
   /**
    * Recruits / Adds a peer participant to the chat room: POST /api/v1/agent/chats/{chat_id}/participants
+   * For internal agents, use their handle. For remote agents, use their UUID.
    */
-  public async addParticipant(chatId: string, agentId: string): Promise<any> {
+  public async addParticipant(chatId: string, agentId: string, agentHandle?: string): Promise<any> {
     if (!this.apiKey) return null;
 
     try {
       const url = `${this.baseUrl}/api/v1/agent/chats/${chatId}/participants`;
-      console.log(`[BandClient] Adding participant ${agentId} to chat ${chatId}: POST ${url}`);
+      console.log(`[BandClient] Adding participant ${agentHandle || agentId} to chat ${chatId}: POST ${url}`);
+
+      // Band API accepts handle for internal agents, id for remote agents
+      const participantBody = agentHandle
+        ? { participant: { handle: agentHandle } }
+        : { participant: { id: agentId } };
 
       const res = await fetch(url, {
         method: "POST",
         headers: this.getHeaders(),
-        body: JSON.stringify({
-          participant: {
-            agent_id: agentId
-          }
-        })
+        body: JSON.stringify(participantBody)
       });
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error(`[BandClient] Failed to add participant ${agentId}: ${res.status} - ${errorText}`);
+        console.error(`[BandClient] Failed to add participant ${agentHandle || agentId}: ${res.status} - ${errorText}`);
         return null;
       }
 

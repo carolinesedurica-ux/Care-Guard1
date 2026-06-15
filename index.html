@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CareGuard — Compliance Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -2413,93 +2414,10 @@
 
   <!-- Javascript -->
   <script>
-    // Initial Cases Database (Provides durable compliance variables across navigation targets)
-    const CASES_DATABASE = [
-      {
-        id: "CG-2026-001",
-        title: "Finance Dept: Sudden Absenteeism & Psychological Safety",
-        subtitle: "Corporate Operations · Stage: Challenge Mode Active",
-        severity: "Critical",
-        stage: "Challenge",
-        classification: "Psychosocial Wellbeing",
-        sector: "Corporate Operations",
-        legalExposure: "HIGH / WHS BREACH RISK",
-        eapCoverage: "T2 Authorized",
-        frameworks: ["ISO 45003:2021", "WHS Act 2011", "Duty of Care"],
-        hasSignOff: false
-      },
-      {
-        id: "CG-2026-002",
-        title: "Tunnel Vent Alpha: Systemic Fatigue Threat",
-        subtitle: "Mining Block 4 · Active multi-agent screening",
-        severity: "Elevated",
-        stage: "Deliberating",
-        classification: "Systemic Overwork",
-        sector: "Mining",
-        legalExposure: "ELEVATED RISK SCORE",
-        eapCoverage: "T2 Authorized",
-        frameworks: ["WHS Act 2011", "ISO 45003:2021", "ILO C155"],
-        hasSignOff: false
-      },
-      {
-        id: "CG-2025-081",
-        title: "Conflict of Interest Decoupling & Moral Injury",
-        subtitle: "Defense Sector Joint Tactical Hub · Sealed secure protocol",
-        severity: "Moderate",
-        stage: "Sealed",
-        classification: "Moral Injury",
-        sector: "Military",
-        legalExposure: "MINIMAL EXPOSURE",
-        eapCoverage: "T1 Standard",
-        frameworks: ["Duty of Care", "Moral Injury Pathway"],
-        hasSignOff: true
-      },
-      {
-        id: "CG-2025-104",
-        title: "Post-Traumatic Stress Exposure Support Pathway",
-        subtitle: "County Emergency Response Team Block B · Sign-off Ready",
-        severity: "Critical",
-        stage: "Sign-off",
-        classification: "PTSD/Trauma Exposure",
-        sector: "Emergency Services",
-        legalExposure: "HIGH EXPOSURE SCENARIO",
-        eapCoverage: "T2 Critical Response",
-        frameworks: ["ISO 45003:2021", "Duty of Care", "EAP Framework"],
-        hasSignOff: false
-      },
-      {
-        id: "CG-2026-004",
-        title: "Supervisor Retaliation Protection Protocol",
-        subtitle: "Alpha Operations Hub · Deliberation complete",
-        severity: "Elevated",
-        stage: "Triage",
-        classification: "Retaliation/Whistleblower",
-        sector: "Construction",
-        legalExposure: "VULNERABILITY UNDER REVIEW",
-        eapCoverage: "T2 Authorized",
-        frameworks: ["Fair Work Act", "Duty of Care"],
-        hasSignOff: false
-      },
-      {
-        id: "CG-2026-005",
-        title: "Intense shift Roster Stress & Burnout Evaluation",
-        subtitle: "Metro Trauma Unit Ward C · Ambient data log",
-        severity: "Low",
-        stage: "Deliberating",
-        classification: "Systemic Overwork",
-        sector: "Healthcare",
-        legalExposure: "MONITORED EXPOSURE",
-        eapCoverage: "T1 Standard",
-        frameworks: ["WHS Act 2011", "ILO C155"],
-        hasSignOff: false
-      }
-    ];
-
-    // Current cases displayed currently inside active list (6 items total)
-    let dynamicCases = [...CASES_DATABASE];
-
-    // Chosen Case loaded into Agent Room & Sign-off Panel
-    let activeCaseId = "CG-2026-001";
+    // Global State variables
+    let dynamicCases = [];
+    let activeCaseId = "";
+    let activeCaseMessages = [];
 
     // 6 Agents definitions
     const COMPLIANCE_AGENTS = [
@@ -2509,82 +2427,6 @@
       { id: "navigator", initials: "CN", name: "Core Navigator", role: "Wellness & Action Plans", status: "Queued", color: "#c9922a", desc: "Coordinates localized wellness schedules." },
       { id: "director", initials: "CD", name: "Review Director", role: "Challenge & Final Memo", status: "Queued", color: "#9b59b6", desc: "Issues peer calibrations and memo compiles." },
       { id: "hr", initials: "HR", name: "HR Advisory", role: "Consultative Action Planning", status: "Queued", color: "linear-gradient(135deg, #1e1b4b, #4338ca)", desc: "Proposes executing step-by-step resolution pathways and RACI matrix." }
-    ];
-
-    // Deliberation timeline 7 logs in perfect chronological sequence
-    const ROOM_TIMELINE_MESSAGES = [
-      {
-        agent: "Triage Sentinel",
-        initials: "TS",
-        color: "#0e9f8a",
-        time: "09:14:32",
-        type: "Triage",
-        typeClass: "triage-type",
-        text: "<strong>Case Intake Redaction Scan Clear.</strong> Verified baseline reporting markers: 1. Cumulative stress vectors detected on active Shift roster, 2. Hostile supervisor management report. Baseline severity determined as <strong>CRITICAL</strong> under ISO 45003 §6.3 parameters. Directing case profile to active Risk & Duty analysis models."
-      },
-      {
-        agent: "Risk Analytics",
-        initials: "RA",
-        color: "#2d8de8",
-        time: "09:16:11",
-        type: "Analysis",
-        typeClass: "analysis-type",
-        text: "<strong>Legal Liability calculations complete.</strong> System flags structural vulnerability vector under WHS Act 2011 Duty provisions. Estimated monetary exposure models suggest statutory fine vulnerability ranging from <strong>$150,000 to prosecution limits of $3,000,000</strong> on organization if immediate fatigue rest schedules and supervisor-decoupling guidelines are not integrated. Workers compensation liability multipliers assessed at 3.2x baseline."
-      },
-      {
-        agent: "Policy Guard",
-        initials: "PG",
-        color: "#10b981",
-        time: "09:17:44",
-        type: "Policy Checklist",
-        typeClass: "policy-type",
-        text: "<strong>Corporate Protocol Alignment Audited.</strong> Incident context triggers direct breach of Clause 4.7 internal compliance guidelines. System clears direct clearance pathways for instant <strong>Tier 2 Welfare interventions</strong>: authorizing the dispatch of 12-session psychologist vouchers and activating localized roster decoupling buffers. Regionally validated under current Emergency services directives."
-      },
-      {
-        agent: "Review Director",
-        initials: "CD",
-        color: "#9b59b6",
-        time: "09:19:05",
-        type: "Challenge Issued",
-        typeClass: "challenge-type",
-        text: "<strong>Debate Room Stage - Peer Calibration Commenced.</strong><br>• Requesting <span style='font-family: var(--font-mono); color: var(--accent-bright); font-size:11px;' onclick='scrollAndHighlightAgent(\"risk\")'>@risk-analytics-engine</span>: Clarify if roster fatigue checks are verified in existing FRMS tracking or represents system-wide omission.<br>• Requesting <span style='font-family: var(--font-mono); color: var(--success); font-size:11px;' onclick='scrollAndHighlightAgent(\"policy\")'>@policy-guard</span>: Is EAP partner insurer clearance verified for active 12-session psychology limits?"
-      },
-      {
-        agent: "Risk Analytics",
-        initials: "RA",
-        color: "#2d8de8",
-        time: "09:20:18",
-        type: "Peer Response",
-        typeClass: "response-type",
-        text: "<strong>Addressing @review-decision-director:</strong> FRMS registers no active monitoring record for the subject work group in the last 180 days. This absence represents a major additional organizational liability multiplier, not a mitigant. Baseline risk levels are certified as critical. Roster shift separation parameters remain mandatory."
-      },
-      {
-        agent: "Core Navigator",
-        initials: "CN",
-        color: "#c9922a",
-        time: "09:21:55",
-        type: "Action Plan",
-        typeClass: "action-type",
-        text: "<strong>Wellness Containment Protocol structured:</strong><br>1. Enforce 48-hour immediate roster isolation; <br>2. Dispatch EAP Welfare vouchers immediately; <br>3. Relocate operational reporting target from Block B supervisor; <br>4. Run fatigue-compliance schema check on the Block roster; <br>5. Establish weekly wellness tracking for the next 90 days."
-      },
-      {
-        agent: "Review Director",
-        initials: "CD",
-        color: "#9b59b6",
-        time: "09:23:40",
-        type: "Directive Compile",
-        typeClass: "directive-type",
-        text: "<strong>Peer Calibration Consensus Solved.</strong> General consensus compiled: Risk factors validated, decoupling authorized, EAP authorized. Interactive draft compliance memo formulated and exported to the Human Sign-off Queue. Case locked."
-      },
-      {
-        agent: "HR Advisory",
-        initials: "HR",
-        color: "linear-gradient(135deg, #1e1b4b, #4338ca)",
-        time: "09:25:12",
-        type: "HR Advisory",
-        typeClass: "hr-type",
-        text: `<strong>Consultative advisory received. Step-by-step action plan follows.</strong><br><br>Having reviewed all peer assessments and the Director's consolidated memo, I am proposing the following collaborative resolution pathway for case manager confirmation. This plan is consultative — each step requires stakeholder agreement before execution.<br><br><strong>Immediate Actions (0–24h):</strong><br>• <strong>Step 1</strong> — HR Manager contacts the affected individual directly and confidentially to confirm understanding of rights and available support. No operational manager involvement at this stage.<br>• <strong>Step 2</strong> — Activate the supervisor decoupling protocol as recommended by @core-navigator. HR coordinates temporary reporting realignment — this is not punitive to the supervisor; it is a protective measure for the affected individual.<br>• <strong>Step 3</strong> — EAP referral letter prepared and delivered to the individual by HR. Delivery method confirmed with individual (email, physical, or in-person hand-off).<br><br><strong>Short-Term (24–72h):</strong><br>• <strong>Step 4</strong> — HR convenes a confidential briefing with the site Safety Committee (no line managers present). Purpose: share the systemic finding (FRMS gap) and initiate the roster audit without attributing blame to individuals.<br>• <strong>Step 5</strong> — HR prepares the WorkSafe notification draft in consultation with the legal team. No submission until case manager signs off.<br>• <strong>Step 6</strong> — HR schedules a structured welfare check with the affected individual — not a performance review, a supported conversation.<br><br>Responsibility Matrix generated. See RACI tab in Reports for the full matrix. Each step has an assigned Responsible party, Accountable owner, Consulted stakeholders, and Informed parties. No step proceeds without the Accountable owner's confirmation.`
-      }
     ];
 
     // 8 Pre-populated Audit Trails
@@ -2598,6 +2440,82 @@
       { id: "A7", time: "2026-06-12 14:18:22", desc: "Core Navigator compiled 5-point tactical welfare pathway separation timeline", hash: "f328a6c8" },
       { id: "A8", time: "2026-06-12 14:22:15", desc: "Review Director compiled final multi-agent compliance memo and locked Sign-off Queue entry", hash: "da4501a3" }
     ];
+
+    // Map Backend Cases Schema to Frontend Dashboard Layout
+    function mapBackendCaseToFrontend(c) {
+      let severity = 'Low';
+      if (c.riskLevel === 'critical') severity = 'Critical';
+      else if (c.riskLevel === 'high') severity = 'Elevated';
+      else if (c.riskLevel === 'moderate') severity = 'Moderate';
+      else if (c.riskLevel === 'low') severity = 'Low';
+
+      let stage = 'Triage';
+      if (c.status === 'reviewing_agents') stage = 'Consensus';
+      else if (c.status === 'completed') stage = 'Sign-off';
+      else if (c.status === 'escalated_human') stage = 'Sealed';
+
+      const subtitle = `${c.department || 'General'} · Initiated on ${c.dateOfIncident || ''}`;
+
+      return {
+        id: c.id,
+        title: c.title,
+        subtitle: subtitle,
+        severity: severity,
+        stage: stage,
+        classification: c.policyCategory || "Psychosocial Risk",
+        sector: c.department || "General Operations",
+        legalExposure: c.riskLevel === 'critical' || c.riskLevel === 'high' ? "HIGH EXPOSURE" : "LOW RISK VECTOR",
+        eapCoverage: c.riskLevel === 'critical' ? "T2 Authorized" : "T1 Active",
+        frameworks: ["ISO 45003:2021", "Duty of Care"],
+        hasSignOff: c.status === 'escalated_human',
+        description: c.description,
+        redactedDescription: c.redactedDescription,
+        finalRecommendation: c.finalRecommendation,
+        humanReviewerChecklist: c.humanReviewerChecklist || [],
+        finalMemoCompiled: c.finalMemoCompiled
+      };
+    }
+
+    // Dynamic Status Calculation based on real messages & stage
+    function getAgentStatus(agentId, messagesList, stage) {
+      if (stage === 'Sealed') return 'Done';
+      
+      const hasTriage = messagesList.some(m => m.agent === 'triage_agent');
+      const hasRisk = messagesList.some(m => m.agent === 'risk_agent');
+      const hasPolicy = messagesList.some(m => m.agent === 'policy_compliance_agent');
+      const hasNavigator = messagesList.some(m => m.agent === 'care_pathway_agent');
+      const hasDirector = messagesList.some(m => m.agent === 'review_decision_agent');
+      const hasHR = messagesList.some(m => m.agent === 'hr_advisory');
+
+      switch (agentId) {
+        case 'triage':
+          if (hasTriage) return 'Done';
+          if (stage === 'Triage' || stage === 'Consensus') return 'Active';
+          return 'Queued';
+        case 'risk':
+          if (hasRisk) return 'Done';
+          if (stage === 'Consensus' && hasTriage && !hasRisk) return 'Active';
+          return 'Queued';
+        case 'policy':
+          if (hasPolicy) return 'Done';
+          if (stage === 'Consensus' && hasRisk && !hasPolicy) return 'Active';
+          return 'Queued';
+        case 'navigator':
+          if (hasNavigator) return 'Done';
+          if (stage === 'Consensus' && hasPolicy && !hasNavigator) return 'Active';
+          return 'Queued';
+        case 'director':
+          if (hasDirector) return 'Done';
+          if (stage === 'Consensus' && hasNavigator && !hasDirector) return 'Active';
+          return 'Queued';
+        case 'hr':
+          if (hasHR) return 'Done';
+          if (stage === 'Consensus' && hasDirector && !hasHR) return 'Active';
+          return 'Queued';
+        default:
+          return 'Queued';
+      }
+    }
 
     // Switch View Panel
     function switchView(target) {
@@ -2720,6 +2638,7 @@
         if (c.stage === 'Sign-off') stageClass = 'pill-gold';
         if (c.stage === 'Sealed') stageClass = 'pill-green';
         if (c.stage === 'Triage') stageClass = 'pill-amber';
+        if (c.stage === 'Consensus') stageClass = 'pill-blue';
 
         row.innerHTML = `
           <div class="case-info-group">
@@ -2740,12 +2659,15 @@
       const monitor = document.getElementById('dashboard-agent-monitor');
       monitor.innerHTML = '';
 
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId) || dynamicCases[0];
+
       COMPLIANCE_AGENTS.forEach(ag => {
         const row = document.createElement('div');
         row.className = 'agent-status-row';
         row.setAttribute('id', `dash-agent-${ag.id}`);
 
-        let agClass = ag.status === 'Active' ? 'active' : (ag.status === 'Done' ? 'done' : 'queued');
+        let agStatus = currentCase ? getAgentStatus(ag.id, activeCaseMessages, currentCase.stage) : ag.status;
+        let agClass = agStatus === 'Active' ? 'active' : (agStatus === 'Done' ? 'done' : 'queued');
 
         row.innerHTML = `
           <div class="agent-status-left">
@@ -2755,7 +2677,7 @@
               <div style="font-size:10.5px; color:var(--text-muted);">${ag.role}</div>
             </div>
           </div>
-          <span class="agent-status-pill ${agClass}">${ag.status}</span>
+          <span class="agent-status-pill ${agClass}">${agStatus}</span>
         `;
         monitor.appendChild(row);
       });
@@ -2780,6 +2702,7 @@
         if (c.stage === 'Sign-off') stageClass = 'pill-gold';
         if (c.stage === 'Sealed') stageClass = 'pill-green';
         if (c.stage === 'Triage') stageClass = 'pill-amber';
+        if (c.stage === 'Consensus') stageClass = 'pill-blue';
 
         row.innerHTML = `
           <div class="case-info-group">
@@ -2807,11 +2730,7 @@
         card.className = 'agent-room-card';
         card.setAttribute('id', `agent-room-card-${ag.id}`);
 
-        let agStatus = ag.status;
-        if (currentCase.stage === 'Sealed') {
-          agStatus = "Done";
-        }
-
+        let agStatus = getAgentStatus(ag.id, activeCaseMessages, currentCase.stage);
         let agClass = agStatus === 'Active' ? 'active' : (agStatus === 'Done' ? 'done' : 'queued');
         if (agStatus === 'Active') {
           card.classList.add('active');
@@ -2833,20 +2752,65 @@
       const timeline = document.getElementById('deliberation-timeline');
       timeline.innerHTML = '';
 
-      ROOM_TIMELINE_MESSAGES.forEach((item, index) => {
+      if (activeCaseMessages.length === 0) {
+        timeline.innerHTML = '<div class="p-4 text-center text-slate-400">Awaiting multi-agent deliberation...</div>';
+        return;
+      }
+
+      activeCaseMessages.forEach((m, index) => {
         const entry = document.createElement('div');
-        entry.className = `timeline-entry ${item.typeClass}`;
+        
+        let typeClass = "response-type";
+        let typeLabel = "Agent Report";
+        if (m.agent === 'system') {
+          typeClass = "triage-type";
+          typeLabel = "System Log";
+        } else if (m.agent === 'human_reviewer') {
+          typeClass = "hr-type";
+          typeLabel = "Human Reviewer";
+        } else if (m.type === 'challenge_issued') {
+          typeClass = "challenge-type";
+          typeLabel = "Challenge";
+        } else if (m.type === 'agent_reply') {
+          typeClass = "response-type";
+          typeLabel = "Peer Reply";
+        } else if (m.type === 'final_memo') {
+          typeClass = "directive-type";
+          typeLabel = "Final Memo";
+        }
+
+        entry.className = `timeline-entry ${typeClass}`;
         entry.setAttribute('id', `timeline-item-${index}`);
 
+        // Get matching agent avatar and color
+        let color = "#7a95b0";
+        const matchedAgent = COMPLIANCE_AGENTS.find(ag => {
+          if (ag.id === 'triage' && m.agent === 'triage_agent') return true;
+          if (ag.id === 'risk' && m.agent === 'risk_agent') return true;
+          if (ag.id === 'policy' && m.agent === 'policy_compliance_agent') return true;
+          if (ag.id === 'navigator' && m.agent === 'care_pathway_agent') return true;
+          if (ag.id === 'director' && m.agent === 'review_decision_agent') return true;
+          if (ag.id === 'hr' && m.agent === 'hr_advisory') return true;
+          return false;
+        });
+
+        if (matchedAgent) {
+          color = matchedAgent.color;
+        } else if (m.agent === 'human_reviewer') {
+          color = "#10b981";
+        }
+
+        const formattedTime = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
         entry.innerHTML = `
-          <div class="timeline-entry-avatar" style="background:${item.color};"></div>
+          <div class="timeline-entry-avatar" style="background:${color};"></div>
           <div class="timeline-header">
-            <span class="timeline-agent-name" style="color:${item.color};">${item.agent}</span>
-            <span class="timeline-timestamp">${item.time}</span>
-            <span class="pill" style="font-size:8px; padding:2px 6px; background: rgba(28,46,66,0.5);">${item.type}</span>
+            <span class="timeline-agent-name" style="color:${color};">${m.agentName}</span>
+            <span class="timeline-timestamp">${formattedTime}</span>
+            <span class="pill" style="font-size:8px; padding:2px 6px; background: rgba(28,46,66,0.5);">${typeLabel}</span>
           </div>
           <div class="timeline-bubble">
-            ${item.text}
+            ${m.content}
           </div>
         `;
         timeline.appendChild(entry);
@@ -2857,72 +2821,52 @@
       const container = document.getElementById('partial-reports-container');
       container.innerHTML = '';
 
+      const triageMsg = activeCaseMessages.find(m => m.agent === 'triage_agent');
+      const riskMsg = activeCaseMessages.find(m => m.agent === 'risk_agent' && m.type === 'agent_report');
+      const policyMsg = activeCaseMessages.find(m => m.agent === 'policy_compliance_agent' && m.type === 'agent_report');
+      const navigatorMsg = activeCaseMessages.find(m => m.agent === 'care_pathway_agent');
+      const hrMsg = activeCaseMessages.find(m => m.agent === 'hr_advisory');
+
       const accordionContents = [
         {
           id: "sentinel-acc",
           handle: "@triage-sentinel",
           title: "Severity & Classification Report",
           pillClass: "pill-red",
-          pillText: "Critical Severity",
-          body: `<strong>Incident Triage Analysis:</strong><br>
-                 After processing the incident input of reported workplace bullying, supervisor hostility, and systemic fatigue indexes, the Triage Sentinel model confirms a severe and active psychosocial threat.<br><br>
-                 <strong>Determinations & Escalations:</strong><br>
-                 • <strong>Triage Severity Threshold</strong>: Critical Risk metrics validated in accordance with ISO 45003 guidelines.<br>
-                 • <strong>Active Legislative Classifications</strong>: Psychosocial Wellbeing Threat, Bullying / Harassment Vector, and Systemic Fatigue Risk.<br>
-                 • <strong>Critical Safeguard Trigger</strong>: Automated redirection from direct managerial surveillance lines is required immediately. Relocate subject employee from Block B operations schedule.`
+          pillText: "Triage Done",
+          body: triageMsg ? triageMsg.content : "Triage Sentinel has not compiled details for this case yet."
         },
         {
           id: "risk-acc",
           handle: "@remote-analytic-engine",
           title: "Legal & Liability Exposure Analysis",
           pillClass: "pill-red",
-          pillText: "High Legal Exposure",
-          body: `<strong>Statutory Exposure Profile:</strong><br>
-                 The Legal Risk engine has cross-audited operational registers of active supervisor rosters. Due to the absence of a verified Fatigue Risk Management System (FRMS) and Failure to protect direct psychosocial comfort, deep legislative vulnerability is logged.<br><br>
-                 <strong>Direct Exposures Mapped:</strong><br>
-                 • <strong>WHS Breach Threat</strong>: High baseline breach vulnerability under standard Work Health & Safety Act general duty protocols.<br>
-                 • <strong>Litigation Vulnerability Metrics</strong>: Estimates project statutory mitigation litigation bounds starting from <strong>AUD $150,000 to prosecution up to $3,000,000</strong> on primary parameters.<br>
-                 • <strong>Workers Compensation Danger</strong>: Estimated compensation claim probability evaluated at 3.2x baseline industry levels.`
+          pillText: "Risk Mapped",
+          body: riskMsg ? riskMsg.content : "Risk Analytics Engine has not analyzed this case yet."
         },
         {
           id: "policy-acc",
           handle: "@policy-guard",
           title: "Internal Policy & EAP Alignment Memo",
           pillClass: "pill-amber",
-          pillText: "Clause 4.7 Breach",
-          body: `<strong>Internal Corporate Compliance Policy Check:</strong><br>
-                 Workplace circumstances trigger direct violation profiles of Corporate Bylaw §4.7 (Protected supervisory limits and mental wellbeing). Compliance audit recommends active quarantine boundaries.<br><br>
-                 <strong>Resolution & Employee Assistance clearance guidelines:</strong><br>
-                 • <strong>EAP Intervention Cleared</strong>: Immediate 12-session Employee Assistance Program with dedicated regional psychologist support tokens.<br>
-                 • <strong>Supervisor Decoupling Boundary</strong>: Administrative triggers must decouple supervisor schedule from the employee during pending review.`
+          pillText: "Policy Checked",
+          body: policyMsg ? policyMsg.content : "Policy Guard has not mapped policies for this case yet."
         },
         {
           id: "navigator-acc",
           handle: "@core-navigator",
           title: "Tactical Wellness Pathway & Action Plan",
           pillClass: "pill-blue",
-          pillText: "5 Containment Plans",
-          body: `<strong>Actionable Support Logistics:</strong><br>
-                 Outline of the mandatory wellness and operational relief timeline generated for Case Lead approval:<br><br>
-                 1. <strong>Roster Separation (Immediate 0-48h)</strong>: Relief from active shift responsibilities on Block B.<br>
-                 2. <strong>Welfare Token Dispatch (Immediate 24h)</strong>: Immediate counselor coordination with EAP Tier 2 vouchers.<br>
-                 3. <strong>Operational Supervisor Separation</strong>: Setting system decoupling schedule limits in schedule logs.<br>
-                 4. <strong>Systemic Fatigue Audit</strong>: Target localized roster parameters for high shift fatigue vectors.<br>
-                 5. <strong>Surveillance Logs</strong>: Execute ambient weekly wellness status check-ins for 90 days.`
+          pillText: "Containment Mapped",
+          body: navigatorMsg ? navigatorMsg.content : "Core Navigator has not generated support logistics yet."
         },
         {
           id: "hr-acc",
           handle: "@hr-advisory",
           title: "Consultative Action Plan & RACI Report",
           pillClass: "pill-indigo",
-          pillText: "Proposal Pending Approval",
-          body: `<strong>Consultative Action Resolution Scheme:</strong><br>
-                 This advisory report introduces a structured workplace resolution pathway co-designed with key organizational stakeholders. Transitioning from the unilateral directive models, the HR Advisory proposes human-centered administrative checks and collaborative responsibility matrices.<br><br>
-                 <strong>Pathway Milestones Mapped:</strong><br>
-                 • <strong>0–24 Hours</strong>: Confidentially briefing the affected individual regarding rights and support lanes. Initiate safe temporary reporting decoupling protocols (Block B).<br>
-                 • <strong>24–72 Hours</strong>: Brief safety committees on roster FRMS omissions without blaming individuals. Prepare external regulatory drafts.<br>
-                 • <strong>72 Hours Onwards</strong>: Facilitate structured welfare checkups and a collaborative return-to-work design process.<br>
-                 • <strong>RACI Execution Safety</strong>: Full Responsibility Assignment Matrix is configured inside the <strong>RACI Matrix View</strong>. No operational steps are executed without human stakeholder alignment.`
+          pillText: "HR Consult Ready",
+          body: hrMsg ? hrMsg.content : "HR Advisory has not generated the consultative pathway yet."
         }
       ];
 
@@ -2966,12 +2910,15 @@
       if (tab === 'partial') {
         document.querySelector("[onclick=\"switchReportTab('partial')\"]").classList.add('active');
         document.getElementById('rep-partial').classList.add('active');
+        renderPartialAccordions();
       } else if (tab === 'holistic') {
         document.querySelector("[onclick=\"switchReportTab('holistic')\"]").classList.add('active');
         document.getElementById('rep-holistic').classList.add('active');
+        renderHolisticReport();
       } else if (tab === 'matrix') {
         document.querySelector("[onclick=\"switchReportTab('matrix')\"]").classList.add('active');
         document.getElementById('rep-matrix').classList.add('active');
+        renderRiskMatrix();
       }
     }
 
@@ -3006,7 +2953,7 @@
         const item = document.createElement('div');
         item.className = 'agent-room-card';
         item.setAttribute('id', `network-agent-${ag.id}`);
-        item.style.marginBottom = '12px';
+        item.style.style = 'margin-bottom: 12px;';
 
         item.innerHTML = `
           <div class="agent-circle-avatar" style="background:${ag.color}; width:34px; height:34px; font-size:12px; font-weight:700;">${ag.initials}</div>
@@ -3024,66 +2971,120 @@
     }
 
     // Dynamic Navigation Controls triggered by clicking cases
-    function loadCaseAndRedirect(caseId) {
+    async function loadCaseAndRedirect(caseId) {
       activeCaseId = caseId;
-      const targetCase = dynamicCases.find(c => c.id === caseId) || dynamicCases[0];
-
-      // Update room panel context variables
-      document.getElementById('deliberation-case-code').textContent = `Case #${caseId}`;
-      document.getElementById('sum-case-id').textContent = caseId;
-      document.getElementById('sum-severity').className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : (targetCase.severity === 'Elevated' ? 'pill-amber' : 'pill-blue')}`;
-      document.getElementById('sum-severity').textContent = targetCase.severity;
-      document.getElementById('sum-classification').textContent = targetCase.classification;
-      document.getElementById('sum-sector').textContent = targetCase.sector;
-      document.getElementById('sum-stage').textContent = `${targetCase.stage} Stage`;
       
-      const exposurePill = document.getElementById('sum-exposure');
-      if (targetCase.severity === 'Critical') {
-        exposurePill.className = "pill pill-red";
-        exposurePill.textContent = "HIGH EXPOSURE";
-      } else if (targetCase.severity === 'Elevated') {
-        exposurePill.className = "pill pill-amber";
-        exposurePill.textContent = "MODERATE INDEX";
-      } else {
-        exposurePill.className = "pill pill-blue";
-        exposurePill.textContent = "LOW RISK VECTOR";
+      try {
+        const res = await fetch(`/api/cases/${caseId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const targetCase = mapBackendCaseToFrontend(data.caseItem);
+          activeCaseMessages = data.messages || [];
+          
+          // Replace matching case in dynamicCases list
+          const idx = dynamicCases.findIndex(c => c.id === caseId);
+          if (idx !== -1) {
+            dynamicCases[idx] = targetCase;
+          }
+
+          // Update room panel context variables
+          document.getElementById('deliberation-case-code').textContent = `Case #${caseId}`;
+          document.getElementById('sum-case-id').textContent = caseId;
+          document.getElementById('sum-severity').className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : (targetCase.severity === 'Elevated' ? 'pill-amber' : 'pill-blue')}`;
+          document.getElementById('sum-severity').textContent = targetCase.severity;
+          document.getElementById('sum-classification').textContent = targetCase.classification;
+          document.getElementById('sum-sector').textContent = targetCase.sector;
+          document.getElementById('sum-stage').textContent = `${targetCase.stage} Stage`;
+          
+          const exposurePill = document.getElementById('sum-exposure');
+          if (targetCase.severity === 'Critical' || targetCase.severity === 'Elevated') {
+            exposurePill.className = "pill pill-red";
+            exposurePill.textContent = "HIGH EXPOSURE";
+          } else {
+            exposurePill.className = "pill pill-blue";
+            exposurePill.textContent = "LOW RISK VECTOR";
+          }
+
+          const eapPill = document.getElementById('sum-eap');
+          if (targetCase.severity === 'Critical') {
+            eapPill.className = "pill pill-blue";
+            eapPill.textContent = "T2 Authorized";
+          } else {
+            eapPill.className = "pill pill-green";
+            eapPill.textContent = "T1 Active";
+          }
+
+          // Sync Tag Guidelines
+          const tagsContainer = document.getElementById('sum-framework-tags');
+          tagsContainer.innerHTML = '';
+          targetCase.frameworks.forEach(t => {
+            tagsContainer.innerHTML += `<div class="framework-tag">${t}</div>`;
+          });
+
+          // Sync Holistic memo headers
+          const memoPill = document.getElementById('memo-top-pill');
+          if (memoPill) {
+            memoPill.textContent = `${targetCase.severity} Severity Isolation`;
+            memoPill.className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : 'pill-amber'}`;
+          }
+          const memoTitle = document.getElementById('memo-header-title');
+          if (memoTitle) {
+            memoTitle.textContent = `${targetCase.classification.toUpperCase()} MULTI-AGENT COMPLIANCE ANALYSIS`;
+          }
+          const memoMeta = document.getElementById('memo-header-meta');
+          if (memoMeta) {
+            memoMeta.textContent = `MEMO ID: CG-${caseId.slice(-4)}-99 | SECTOR: ${targetCase.sector.toUpperCase()}`;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load case details from backend:", err);
       }
-
-      const eapPill = document.getElementById('sum-eap');
-      if (targetCase.id === 'CG-2026-001' || targetCase.severity === 'Critical') {
-        eapPill.className = "pill pill-blue";
-        eapPill.textContent = "T2 Authorized";
-      } else {
-        eapPill.className = "pill pill-green";
-        eapPill.textContent = "T1 Active";
-      }
-
-      // Sync Tag Guidelines
-      const tagsContainer = document.getElementById('sum-framework-tags');
-      tagsContainer.innerHTML = '';
-      targetCase.frameworks.forEach(t => {
-        tagsContainer.innerHTML += `<div class="framework-tag">${t}</div>`;
-      });
-
-      // Sync Holistic memo headers
-      document.getElementById('memo-top-pill').textContent = `${targetCase.severity} Severity Isolation`;
-      document.getElementById('memo-top-pill').className = `pill ${targetCase.severity === 'Critical' ? 'pill-red' : 'pill-amber'}`;
-      document.getElementById('memo-header-title').textContent = `${targetCase.classification.toUpperCase()} MULTI-AGENT COMPLIANCE ANALYSIS`;
-      document.getElementById('memo-header-meta').textContent = `MEMO ID: CG-${caseId.slice(-4)}-99 | SECTOR: ${targetCase.sector.toUpperCase()}`;
 
       // Highlight target visual badges, then navigate to room
       toast('info', `Swapping active workspace context to Case ${caseId}.`);
       switchView('room');
     }
 
-    // Interactive Action triggers
-    function generateHolisticReport() {
-      toast('info', 'Executing multi-agent compile. Gathering compliance telemetry...');
-      setTimeout(() => {
-        toast('success', 'Holistic Compliance Memo generated successfully. Shared view refreshed.');
-        switchView('reports');
-        switchReportTab('holistic');
-      }, 800);
+    // Trigger Real-Time Deliberation
+    async function generateHolisticReport() {
+      if (!activeCaseId) return;
+      toast('info', 'Invoking roster agents. Bootstrapping Band collaboration pipeline...');
+      
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId);
+      if (currentCase) {
+        currentCase.stage = 'Consensus';
+        document.getElementById('sum-stage').textContent = 'Consensus Stage';
+      }
+
+      renderAgentHeaderStrip();
+
+      try {
+        const res = await fetch(`/api/cases/${activeCaseId}/trigger-review`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        
+        if (res.ok) {
+          toast('success', 'Multi-agent review and consensus compiled successfully.');
+          await loadCaseAndRedirect(activeCaseId);
+          switchView('reports');
+          switchReportTab('holistic');
+        } else {
+          const errData = await res.json();
+          toast('warning', `Review failed: ${errData.error || 'consensus error'}`);
+          if (currentCase) {
+            currentCase.stage = 'Triage';
+            await loadCaseAndRedirect(activeCaseId);
+          }
+        }
+      } catch (err) {
+        console.error("Error triggering agent review:", err);
+        toast('warning', 'Network error during agent review.');
+        if (currentCase) {
+          currentCase.stage = 'Triage';
+          await loadCaseAndRedirect(activeCaseId);
+        }
+      }
     }
 
     function executeReworkTrigger() {
@@ -3091,79 +3092,53 @@
       switchView('room');
     }
 
-    function executeSignOffAndSeal() {
-      // Validate certifications checking
-      const check1 = document.getElementById('signoff-check-1').checked;
-      const check2 = document.getElementById('signoff-check-2').checked;
-      const check3 = document.getElementById('signoff-check-3').checked;
-      const check4 = document.getElementById('signoff-check-4').checked;
-      const checkAdvisory = document.getElementById('signoff-check-advisory').checked;
+    // Commit Human Sign-Off and Seal Ledger
+    async function executeSignOffAndSeal() {
+      const checkboxes = document.querySelectorAll('.signoff-checkbox');
+      let allChecked = true;
+      checkboxes.forEach(box => {
+        if (!box.checked) allChecked = false;
+      });
 
-      if (!check1 || !check2 || !check3 || !check4 || !checkAdvisory) {
-        toast('warning', 'Human sign-off blocked: All 5 regulatory checkboxes must be certified.');
+      if (!allChecked) {
+        toast('warning', 'Human sign-off blocked: All regulatory checkboxes must be certified.');
         return;
       }
 
+      const reviewerNotes = document.getElementById('signoff-reviewer-notes').value || "Advisory consensus certified.";
+
       toast('info', 'Generating ledger primacy blocks. Transmitting signature hash...');
-      
-      setTimeout(() => {
-        // Change case stage dynamically 
-        const currentCase = dynamicCases.find(c => c.id === activeCaseId);
-        if (currentCase) {
-          currentCase.stage = "Sealed";
-          currentCase.hasSignOff = true;
-          currentCase.subtitle = `${currentCase.subtitle.split('·')[0]} · Cryptographic ledger sealed and certified by CM.`;
+
+      try {
+        const res = await fetch(`/api/cases/${activeCaseId}/human-action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actionText: reviewerNotes,
+            signOffStatus: true
+          })
+        });
+
+        if (res.ok) {
+          toast('success', 'Ledger primacy block successfully sealed. Transaction archived.');
+          await fetchCasesFromBackend();
+          await loadCaseAndRedirect(activeCaseId);
+          switchView('ledger');
+          
+          // Reset check status
+          document.querySelectorAll('.signoff-checkbox').forEach(box => box.checked = false);
+          if (typeof updateAdvisorySignoffStatus === 'function') updateAdvisorySignoffStatus();
+        } else {
+          toast('warning', 'Failed to submit sign-off to server.');
         }
-
-        // Add 9th dynamic log to Audit Trail
-        const now = new Date();
-        const liveTimestamp = now.toISOString().replace('T', ' ').slice(0, 19);
-
-        // Check if A9-HR exists to prevent duplicates
-        const existsHR = AUDIT_TRAILS.some(e => e.id === "A9-HR");
-        if (!existsHR) {
-          AUDIT_TRAILS.push({
-            id: "A9-HR",
-            time: liveTimestamp,
-            desc: "ADVISORY CLOSED — @hr-advisory consultative action plan certified. Stakeholder consensus verified.",
-            hash: "da8a404c",
-            badge: "VERIFIED"
-          });
-        }
-
-        // Check if 9th log exists to prevent duplicates
-        const exists = AUDIT_TRAILS.some(e => e.id === "A9");
-        if (!exists) {
-          AUDIT_TRAILS.push({
-            id: "A9",
-            time: liveTimestamp,
-            desc: `HUMAN SIGN-OFF ACHIEVED — CASE ${activeCaseId} COMPLIANCE DIRECTIVE SEALED AND ARCHIVED BY reviewer (Initials: CM)`,
-            hash: "f2a6cb82"
-          });
-        }
-
-        // Update badge counts
-        document.getElementById('badge-signoff-count').textContent = "1";
-        document.getElementById('badge-cases-count').textContent = "3";
-
-        toast('success', 'Ledger primacy block successfully sealed. Transaction archived.');
-        
-        // Render audit ledger
-        if (typeof renderAuditLedger === 'function') renderAuditLedger();
-        
-        switchView('ledger');
-
-        // Reset check status
-        document.querySelectorAll('.signoff-checkbox').forEach(box => box.checked = false);
-
-        // Reset dynamic consensus status
-        if (typeof updateAdvisorySignoffStatus === 'function') updateAdvisorySignoffStatus();
-      }, 1000);
+      } catch (err) {
+        console.error("Error signing off case:", err);
+        toast('warning', 'Network error during sign-off.');
+      }
     }
 
     function confirmStakeholder(btn, actor) {
       if (btn.classList.contains('confirmed')) {
-        // Already confirmed, toggle back
         btn.classList.remove('confirmed');
         btn.textContent = 'Confirm';
         btn.className = 'btn-ghost';
@@ -3178,7 +3153,6 @@
         }
         toast('info', `Stakeholder validation reset for ${actor}.`);
       } else {
-        // Perform confirmation
         btn.classList.add('confirmed');
         btn.textContent = 'Confirmed ✓';
         btn.className = 'btn-success';
@@ -3209,7 +3183,7 @@
       }
     }
 
-    function handleFormSubmission(event) {
+    async function handleFormSubmission(event) {
       event.preventDefault();
 
       const sector = document.getElementById('intake-sector').value;
@@ -3217,48 +3191,51 @@
       const classification = document.getElementById('intake-classification').value;
       const severity = document.getElementById('intake-severity').value;
       const description = document.getElementById('intake-description').value;
-      const date = document.getElementById('intake-date').value || "2026-06-14";
-
-      // Register new case dynamically to database
-      const count = dynamicCases.length + 1;
-      const newId = `CG-2026-00${count}`;
-
-      const newCase = {
-        id: newId,
-        title: `${sector} Dept: ${classification} Incident Evaluation`,
-        subtitle: `${role} · Initiated on ${date}`,
-        severity: severity,
-        stage: "Triage",
-        classification: classification,
-        sector: sector,
-        legalExposure: "COMPUTING VALUE...",
-        eapCoverage: "T2 Pending",
-        frameworks: ["ISO 45003:2021", "Duty of Care"],
-        hasSignOff: false
-      };
-
-      dynamicCases.unshift(newCase);
+      const date = document.getElementById('intake-date').value || new Date().toISOString().split('T')[0];
 
       toast('info', 'Registering intake factors into Case sandbox...');
       
-      // Upgrade Progress Stepppers
       const step2 = document.getElementById('step2-node');
       const step3 = document.getElementById('step3-node');
       
       step2.classList.add('active');
-      
-      setTimeout(() => {
-        step3.classList.add('active');
-        toast('success', `Intake saved. Triage consensus achieved. Room #${newId} initialized.`);
-        
-        // Load target details
-        loadCaseAndRedirect(newId);
 
-        // Reset Intake view steps
+      try {
+        const res = await fetch("/api/cases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: `${sector} Dept: ${classification} Incident Evaluation`,
+            description: description,
+            department: sector,
+            dateOfIncident: date,
+            immediateSafetyConcern: severity === 'Critical' ? 'yes' : 'no',
+            consentStatus: true,
+            priorInterventions: `Operational role: ${role}`,
+            policyCategory: classification
+          })
+        });
+
+        if (res.ok) {
+          const newCase = await res.json();
+          step3.classList.add('active');
+          toast('success', `Intake saved. Triage consensus achieved. Room #${newCase.id} initialized.`);
+          
+          await fetchCasesFromBackend();
+          await loadCaseAndRedirect(newCase.id);
+
+          step2.classList.remove('active');
+          step3.classList.remove('active');
+          document.getElementById('intake-incident-form').reset();
+        } else {
+          toast('warning', 'Failed to save case to backend.');
+          step2.classList.remove('active');
+        }
+      } catch (err) {
+        console.error("Error submitting case:", err);
+        toast('warning', 'Network error submitting case.');
         step2.classList.remove('active');
-        step3.classList.remove('active');
-        document.getElementById('intake-incident-form').reset();
-      }, 1200);
+      }
     }
 
     function addNewFrameworkTag() {
@@ -3289,10 +3266,8 @@
       box.innerHTML = `<span>${icon}</span> <span>${text}</span>`;
       bin.appendChild(box);
 
-      // Trigger transition frame
       setTimeout(() => box.classList.add('show'), 10);
 
-      // Auto Dismiss after 3s
       setTimeout(() => {
         box.classList.remove('show');
         setTimeout(() => box.remove(), 300);
@@ -3306,18 +3281,284 @@
       }, 500);
     }
 
-    // Set Init Date default value
-    document.addEventListener("DOMContentLoaded", () => {
+    function renderHolisticReport() {
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId) || dynamicCases[0];
+      const memoFrame = document.querySelector('.holistic-memo-frame');
+      if (!memoFrame) return;
+
+      const memo = currentCase.finalMemoCompiled;
+      if (!memo) {
+        memoFrame.innerHTML = `
+          <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+            <h3>No Holistic Memo compiled yet.</h3>
+            <p style="margin-top: 8px;">Please run the multi-agent deliberation room triage first.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let rationaleHTML = memo.rationale ? memo.rationale.map((r, idx) => `
+        <li class="flex items-start gap-1.5 text-xs text-slate-350 leading-relaxed mb-1.5" style="margin-bottom: 8px; font-size:12.5px;">
+          <span class="bg-slate-800 text-slate-200 font-bold px-1.5 py-0.2 rounded text-[9px] font-mono mt-0.5 shrink-0 select-none">0${idx+1}</span>
+          <span>${r}</span>
+        </li>
+      `).join('') : '';
+
+      memoFrame.innerHTML = `
+        <div class="memo-gradient-banner">
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+              <span class="pill pill-red" style="margin-bottom: 10px;" id="memo-top-pill">${currentCase.severity} Severity Isolation</span>
+              <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;" id="memo-header-title">${currentCase.classification.toUpperCase()} MULTI-AGENT COMPLIANCE ANALYSIS</h3>
+              <p style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);" id="memo-header-meta">MEMO ID: CG-${currentCase.id.slice(-4)}-99 | AUDITED</p>
+            </div>
+            <span class="pill pill-gold" style="font-weight: 700;">${currentCase.stage === 'Sealed' ? 'LEDGER SEALED' : 'DRAFT FOR HUMAN SIGN-OFF'}</span>
+          </div>
+        </div>
+
+        <div class="memo-content">
+          <div class="memo-section">
+            <div class="memo-section-heading">1. Executive Summary</div>
+            <p style="font-size: 13px; line-height: 1.6; color: var(--text-primary);">This compliance evaluation is compiled collaboratively through direct peer analysis in the secure Band.ai environment. It provides real-time audit coverage and supervisor-decoupling recommendations for Case #${currentCase.id}.</p>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-section-heading">2. Recommended Case Resolution Recipe</div>
+            <div class="bg-slate-900 text-white p-4 rounded-xl border border-slate-800 space-y-1 mb-3" style="background-color: var(--surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+              <p class="text-xs font-bold leading-relaxed" style="font-size:13px;">${memo.recommendedNextStep}</p>
+            </div>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-section-heading">3. Strategic Rationale & Case Analytics</div>
+            <ul style="list-style: none; padding-left: 0;">
+              ${rationaleHTML}
+            </ul>
+          </div>
+
+          <div class="memo-warning-strip">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-size: 24px;">⚖️</span>
+              <div>
+                <h4 style="font-size: 13px; font-weight: 600; color: var(--gold);">${currentCase.stage === 'Sealed' ? 'Compliance Certified' : 'Compliance Certification Pending'}</h4>
+                <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">${currentCase.stage === 'Sealed' ? 'This document has been permanently archived in the non-repudiation audit ledger.' : 'This document must undergo manual reviewer sign-off to be legally stored in the ledger.'}</p>
+              </div>
+            </div>
+            ${currentCase.stage !== 'Sealed' ? `<button class="btn-primary" style="background-color: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 700;" onclick="switchView('signoff')">Go to Sign-Off Queue</button>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRiskMatrix() {
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId) || dynamicCases[0];
+      const panel = document.getElementById('rep-matrix');
+      if (!panel) return;
+
+      let riskColor = 'var(--success)';
+      let riskVal = 'LOW RISK';
+      if (currentCase.severity === 'Critical') {
+        riskColor = 'var(--danger)';
+        riskVal = 'CRITICAL RISK';
+      } else if (currentCase.severity === 'Elevated') {
+        riskColor = 'var(--warning)';
+        riskVal = 'ELEVATED RISK';
+      } else if (currentCase.severity === 'Moderate') {
+        riskColor = 'var(--accent-bright)';
+        riskVal = 'MODERATE RISK';
+      }
+
+      panel.innerHTML = `
+        <div class="risk-grid-container">
+          <div class="risk-matrix-cell" style="border-top: 3px solid ${riskColor};">
+            <span class="risk-cell-header">Legal Exposure</span>
+            <span class="risk-cell-value" style="color: ${riskColor};">${riskVal}</span>
+            <span class="risk-cell-subtext">Exposure profile based on case intake and regulatory mapping.</span>
+          </div>
+          <div class="risk-matrix-cell" style="border-top: 3px solid ${riskColor};">
+            <span class="risk-cell-header">Physiological Risk</span>
+            <span class="risk-cell-value" style="color: ${riskColor};">${riskVal}</span>
+            <span class="risk-cell-subtext">Distress triggers tracked via active workspace telemetry.</span>
+          </div>
+          <div class="risk-matrix-cell" style="border-top: 3px solid var(--warning);">
+            <span class="risk-cell-header">Policy Breach</span>
+            <span class="risk-cell-value" style="color: var(--warning);">CHECKED</span>
+            <span class="risk-cell-subtext">Alignment audited against corporate Duty of Care and bylaws.</span>
+          </div>
+          <div class="risk-matrix-cell" style="border-top: 3px solid ${riskColor};">
+            <span class="risk-cell-header">Safety Risk Vector</span>
+            <span class="risk-cell-value" style="color: ${riskColor};">${riskVal}</span>
+            <span class="risk-cell-subtext">Workplace isolation requirements monitored.</span>
+          </div>
+          <div class="risk-matrix-cell" style="border-top: 3px solid var(--accent-bright);">
+            <span class="risk-cell-header">EAP Coverage</span>
+            <span class="risk-cell-value" style="color: var(--accent-bright); font-family: var(--font-mono);">${currentCase.eapCoverage}</span>
+            <span class="risk-cell-subtext">Welfare allocation level and psychologist support tokens.</span>
+          </div>
+          <div class="risk-matrix-cell" style="border-top: 3px solid var(--success);">
+            <span class="risk-cell-header">Interventions</span>
+            <span class="risk-cell-value" style="color: var(--success);">READY</span>
+            <span class="risk-cell-subtext">RACI matrix and step-by-step action plans prepared.</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSignOffView() {
+      const currentCase = dynamicCases.find(c => c.id === activeCaseId) || dynamicCases[0];
+      const viewPanel = document.getElementById('view-signoff');
+      if (!viewPanel) return;
+
+      const memo = currentCase.finalMemoCompiled;
+      if (!memo) {
+        viewPanel.innerHTML = `
+          <div class="card p-6" style="text-align: center; color: var(--text-muted);">
+            <h3>No Sign-Off ready for this case.</h3>
+            <p style="margin-top: 8px;">Please run the multi-agent deliberation room triage first.</p>
+            <div style="margin-top:16px;"><button class="btn-primary" style="margin: 0 auto;" onclick="switchView('room')">Go to Deliberation Room</button></div>
+          </div>
+        `;
+        return;
+      }
+
+      let checklistHTML = currentCase.humanReviewerChecklist.map((item, idx) => `
+        <label class="consent-row">
+          <input type="checkbox" class="signoff-checkbox" id="signoff-check-${idx}">
+          <span class="consent-text" style="color: var(--text-primary);">${item}</span>
+        </label>
+      `).join('');
+
+      checklistHTML += `
+        <label class="consent-row">
+          <input type="checkbox" class="signoff-checkbox" id="signoff-check-advisory" onchange="updateAdvisorySignoffStatus()">
+          <span class="consent-text" style="color: var(--text-primary);">I certify that the @hr-advisory consultative action plan has been co-designed with stakeholders, RACI responsibilities confirmed, and individual consent registered.</span>
+        </label>
+      `;
+
+      viewPanel.innerHTML = `
+        <div class="signoff-panel">
+          <div class="signoff-header-block">
+            <div class="signoff-scale-ring">⚖️</div>
+            <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">Human Review & Compliance Sign-Off</h2>
+            <p style="font-size: 11.5px; font-family: var(--font-mono); color: var(--text-muted);">PENDING MANIFEST: CASE ${currentCase.id}</p>
+          </div>
+
+          <!-- Recommendation Block -->
+          <div class="card" style="background-color: var(--surface); border-color: var(--border);">
+            <h4 style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; color: var(--gold);">Taskforce Directive Overviews</h4>
+            <div style="font-size: 13px; line-height: 1.5; color: var(--text-primary); display: flex; flex-direction: column; gap: 8px;">
+              <p>• Recommended Next Step: <strong>${memo.recommendedNextStep}</strong></p>
+              <p>• Risk Exposure determined: <strong>${currentCase.legalExposure}</strong></p>
+              <p>• EAP support: <strong>${currentCase.eapCoverage}</strong></p>
+            </div>
+          </div>
+
+          <!-- Mod Block -->
+          <div class="card">
+            <h4 style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 16px;">Case Manager Modifications</h4>
+            <div class="grid-2" style="margin-bottom: 16px;">
+              <div class="form-group">
+                <label>Review Override Severity</label>
+                <select id="signoff-severity-override">
+                  <option value="${currentCase.severity}">Keep ${currentCase.severity} (Redaction Enforced)</option>
+                  <option value="Critical">Override to Critical</option>
+                  <option value="Elevated">Override to Elevated</option>
+                  <option value="Moderate">Override to Moderate</option>
+                  <option value="Low">Override to Ambient Log</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>EAP Voucher Tier Allocation</label>
+                <select id="signoff-eap-override">
+                  <option value="Tier2">Keep Welfare Tier 2 (12-session vouchers)</option>
+                  <option value="Tier3">Upgrade to Welfare Tier 3 (20-session vouchers)</option>
+                  <option value="Tier1">Downgrade to Welfare Tier 1 (6-session vouchers)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Review Executive Decisions & Audit Notes</label>
+              <textarea id="signoff-reviewer-notes" rows="3" placeholder="Append structural annotations or managerial explanations to the permanent ledger..."></textarea>
+            </div>
+          </div>
+
+          <!-- HR Advisory Action Plan Status Card -->
+          <div class="card" style="border-left: 4px solid var(--indigo);">
+            <div class="card-title-row" style="margin-bottom: 12px;">
+              <h4 style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Advisory Action Plan Consensus</h4>
+              <span id="signoff-advisory-status-pill" class="pill pill-amber">Pending Consensus</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.4; margin-bottom: 0;">
+              This status tracks the alignment between the Case Manager, HR Manager, Affected Individual, Site Supervisor, and external regulatory bodies. Consensus can be certified below when administrative alignments are secured.
+            </p>
+          </div>
+
+          <!-- Digital Confirmation Checkboxes (Must toggle all to confirm sign-off) -->
+          <div class="card" style="border-color: rgba(201, 146, 42, 0.3);">
+            <h4 style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold); margin-bottom: 14px;">Regulatory Sign-off Certifications</h4>
+            <div class="consent-box-container" style="background-color: transparent;">
+              ${checklistHTML}
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 14px; margin-bottom: 40px;">
+            <button class="btn-ghost" onclick="switchView('room')">Return to Room</button>
+            <button class="btn-danger" onclick="executeReworkTrigger()">Request Rework</button>
+            <button class="btn-success" style="flex: 1; justify-content: center;" onclick="executeSignOffAndSeal()">Sign Off & Seal Ledger ✓</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Fetch Cases from server
+    async function fetchCasesFromBackend() {
+      try {
+        const res = await fetch("/api/cases");
+        if (res.ok) {
+          const backendCases = await res.json();
+          dynamicCases = backendCases.map(mapBackendCaseToFrontend);
+          if (dynamicCases.length > 0) {
+            // Find activeCaseId in loaded cases or default to first
+            if (!activeCaseId || !dynamicCases.some(c => c.id === activeCaseId)) {
+              activeCaseId = dynamicCases[0].id;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch cases from backend:", err);
+      }
+    }
+
+    // Hydration function
+    async function initApp() {
+      await fetchCasesFromBackend();
+      
       const dateEl = document.getElementById('intake-date');
       if (dateEl) {
         const today = new Date().toISOString().split('T')[0];
         dateEl.value = today;
       }
+
+      // Pre-load active case details so timelines are populated on startup
+      if (activeCaseId) {
+        try {
+          const res = await fetch(`/api/cases/${activeCaseId}`);
+          if (res.ok) {
+            const data = await res.json();
+            activeCaseMessages = data.messages || [];
+          }
+        } catch (e) {
+          console.error("Failed to pre-hydrate timeline messages:", e);
+        }
+      }
       
       // Load Dashboard Cases first
       renderDashboardCases();
       renderDashboardAgentMonitor();
-    });
+    }
+
+    // Bind DOM Load event
+    document.addEventListener("DOMContentLoaded", initApp);
   </script>
 </body>
 </html>

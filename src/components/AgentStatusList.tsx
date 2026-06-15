@@ -14,6 +14,7 @@ interface AgentStatusListProps {
       policy?: { id: string; handle: string; hasKey: boolean };
       coreNav?: { id: string; handle: string; hasKey: boolean };
       complianceDir?: { id: string; handle: string; hasKey: boolean };
+      hrAdvisory?: { id: string; handle: string; hasKey: boolean };
     };
   } | null;
 }
@@ -48,6 +49,12 @@ const AGENTS_ROSTER = [
     name: "Compliance Review Director",
     avatar: "⚖️",
     desc: "Peer audits recommendations via challenges & compiles final memo"
+  },
+  {
+    role: "hr_advisory" as AgentRole,
+    name: "HR Advisory",
+    avatar: "👔",
+    desc: "Proposes executing step-by-step resolution pathways and RACI matrix"
   }
 ];
 
@@ -84,6 +91,7 @@ export default function AgentStatusList({ activeMessages, isReviewing, customAge
             else if (agent.role === "policy_compliance_agent") agentConfig = customAgentInfo.agents.policy || null;
             else if (agent.role === "care_pathway_agent") agentConfig = customAgentInfo.agents.coreNav || null;
             else if (agent.role === "review_decision_agent") agentConfig = customAgentInfo.agents.complianceDir || null;
+            else if (agent.role === "hr_advisory") agentConfig = customAgentInfo.agents.hrAdvisory || null;
           } else if (agent.role === "triage_agent" && customAgentInfo) {
             agentConfig = {
               id: customAgentInfo.id || "",

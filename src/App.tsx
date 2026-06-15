@@ -859,6 +859,7 @@ export default function App() {
                             if (m.agent === "policy_compliance_agent") sideBorderColor = "border-l-rose-500";
                             if (m.agent === "care_pathway_agent") sideBorderColor = "border-l-teal-500";
                             if (m.agent === "review_decision_agent") sideBorderColor = "border-l-indigo-600";
+                            if (m.agent === "hr_advisory") sideBorderColor = "border-l-violet-600";
                           }
 
                           return (
