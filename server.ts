@@ -718,10 +718,14 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
     return newMsg;
   };
 
-  // Check if Gemini is available. If not, generate high-fidelity simulated response locally!
-  if (!ai) {
-    console.log("No Gemini API Key found or invalid, using simulated psychosocial multi-agent workflow fallback.");
-    // Simulated High-Quality Sequence
+  // Priority 1: Use real LLM API keys (Featherless / AI·ML) for case-specific AI analysis
+  // Priority 2: Use Gemini if available
+  // Priority 3: Fall back to hardcoded simulation only if no API keys exist
+  const hasCustomLLMKeys = !!(process.env.FEATHERLESS_API_KEY || process.env.AIML_API_KEY);
+
+  if (!hasCustomLLMKeys && !ai) {
+    console.log("No API keys available (Gemini, Featherless, or AIML). Using hardcoded simulation fallback.");
+    // Hardcoded Simulation Fallback (generic, not case-specific)
     try {
       // 1. Triage Agent
       const triageText = `**Triage Analysis Complete:** Identified workplace distress elements associated with reporting hierarchy conflicts. Category: **Workplace Wellness / Incident Review**. Urgency Rating: **Moderate-High**.\n\n*Handoff:* Requesting high-stress safety flags from @risk_agent and statutory boundary definitions from @policy_compliance_agent. We need to assess immediate safety before recommending direct HR engagement.`;
@@ -803,8 +807,8 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
     }
   }
 
-  // If custom API keys (Featherless or AI/ML API) exist, run the custom specialized agent taskforce
-  if (process.env.FEATHERLESS_API_KEY || process.env.AIML_API_KEY) {
+  // Custom LLM API keys (Featherless or AI/ML API) — real case-specific AI analysis
+  if (hasCustomLLMKeys) {
     try {
       const docDataString = `Case Details:
 Title: ${caseItem.title}
@@ -1246,8 +1250,8 @@ Respond with a raw JSON object matching this schema:
     }
   }
 
-  // Fallback to Gemini if Gemini is initialized and active
-  if (ai) {
+  // Gemini path — use if Gemini SDK is initialized and custom LLM keys are not available
+  if (ai && !hasCustomLLMKeys) {
     try {
       const docDataString = `Case Details:
 Title: ${caseItem.title}
@@ -1645,8 +1649,24 @@ async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom",
     });
+
+    // Serve index.html directly via Express for root requests,
+    // bypassing Vite's HTML transform pipeline (which injects /@vite/client
+    // and React refresh scripts that cause 403 errors on this vanilla JS page)
+    app.get("/", async (req, res) => {
+      try {
+        const fs = await import("fs");
+        const htmlPath = path.join(process.cwd(), "index.html");
+        const html = fs.readFileSync(htmlPath, "utf-8");
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      } catch (e) {
+        console.error("Error serving index.html:", e);
+        res.status(500).end("Internal Server Error");
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
