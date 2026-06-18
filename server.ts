@@ -87,19 +87,7 @@ for (const [key, cfg] of Object.entries(agentsConfig)) {
 // All 6 agents are internal (no agent API keys); they respond via inline webhook responses.
 const managerClient = new BandClient(process.env.BAND_PERSONAL_API_KEY);
 
-// Adds all provisioned agents (except the room creator) as participants to a Band.ai room.
-// Called whenever a real room is created or upgraded from a local placeholder.
-async function addAllAgentsToRoom(roomId: string): Promise<void> {
-  for (const [_key, cfg] of Object.entries(agentsConfig)) {
-    if (!cfg.handle) continue; // skip unprovisioned
-    try {
-      await managerClient.addParticipant(roomId, cfg.id, cfg.handle);
-      console.log(`[Band] Added ${cfg.displayName} (${cfg.handle}) to room ${roomId}`);
-    } catch (err) {
-      console.warn(`[Band] Failed to add ${cfg.displayName} to room ${roomId}:`, err);
-    }
-  }
-}
+
 
 
 // Initialize Gemini SDK with named parameters & headers as instructed by rules
@@ -670,23 +658,8 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
     }
   }
 
-  let finalBandRoomId = `${caseId}-psychosocial-risk-review`;
-  let hasRealBandRoom = false;
-
-  if (managerClient.isConfigured) {
-    try {
-      const roomTitle = `CareGuard Case #${caseId}: ${title.substring(0, 80)}`;
-      const realRoom = await managerClient.createChatRoom(roomTitle);
-      if (realRoom && realRoom.id) {
-        finalBandRoomId = realRoom.id;
-        hasRealBandRoom = true;
-        console.log(`[BandClient] Real chat room created on Band.ai: ${finalBandRoomId}`);
-        await addAllAgentsToRoom(finalBandRoomId);
-      }
-    } catch (err) {
-      console.error("Failed to dynamically establish real Band.ai room:", err);
-    }
-  }
+  // Band.ai internal agents don't support outbound API auth — rooms are local.
+  const finalBandRoomId = `${caseId}-psychosocial-risk-review`;
 
   const newCase: WorkplaceCase = {
     id: caseId,
@@ -711,26 +684,12 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
     humanReviewerChecklist: []
   };
 
-  if (hasRealBandRoom) {
-    try {
-      await managerClient.sendChatEvent(
-        finalBandRoomId,
-        `🛡️ Case Intake Sync Complete: Case #${caseId} has been successfully opened in CareGuard compliance workspace. Redaction and privacy filters are active.`,
-        "task"
-      );
-    } catch (err) {
-      console.warn("Failed to send init event to Band.ai:", err);
-    }
-  }
-
   const initMsg: BandMessage = {
     id: `m-${caseId}-1`,
     caseId,
     agent: "system",
     agentName: "CareGuard Gateway",
-    content: hasRealBandRoom 
-      ? `🛡️ New Case Intake: A live Band room has been opened on Band.ai platform (Room ID: ${finalBandRoomId}). Patient privacy constraints have been initiated, and specialized agents are synchronized.`
-      : `🛡️ New Case Intake: A local Band room has been opened for Case #${caseId}. Patient privacy constraints have been initiated, and sensitive identity trackers have been redacted. Specialized agents have been summoned.`,
+    content: `🛡️ New Case Intake: A local Band room has been opened for Case #${caseId}. Patient privacy constraints have been initiated, and sensitive identity trackers have been redacted. Specialized agents have been summoned.`,
     timestamp: new Date().toISOString(),
     type: "system_log"
   };
@@ -752,20 +711,7 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
   caseItem.status = "reviewing_agents";
   caseItem.updatedAt = new Date().toISOString();
 
-  // Try to upgrade local/fallback room to a real Band.ai room if the key is configured
-  if (managerClient.isConfigured && caseItem.bandRoomId.startsWith("case-")) {
-    try {
-      const roomTitle = `CareGuard Case #${caseId}: ${caseItem.title.substring(0, 80)}`;
-      const realRoom = await managerClient.createChatRoom(roomTitle);
-      if (realRoom && realRoom.id) {
-        caseItem.bandRoomId = realRoom.id;
-        console.log(`[BandClient] Upgraded case to real Band.ai room: ${caseItem.bandRoomId}`);
-        await addAllAgentsToRoom(caseItem.bandRoomId);
-      }
-    } catch (err) {
-      console.warn("Could not upgrade room to real Band.ai room:", err);
-    }
-  }
+  // Band.ai internal agents don't support outbound API auth — no room upgrade attempted
 
   // Reset messages to clear any old processed messages other than system init log
   const initMsgs = (messages[caseId] || []).filter(m => m.type === "system_log");
