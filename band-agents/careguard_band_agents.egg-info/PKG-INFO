@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: careguard-band-agents
+Version: 0.1.0
+Summary: CareGuard multi-agent workforce connected to Band.ai via the Band SDK
+Requires-Python: >=3.11
+Requires-Dist: band-sdk[anthropic]>=0.1.0
+Requires-Dist: python-dotenv>=1.0.0
