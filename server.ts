@@ -728,8 +728,8 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
     }
   }
 
-  // Use the shared Band.ai room if configured; otherwise fall back to a local ID.
-  const finalBandRoomId = process.env.BAND_DEFAULT_ROOM_ID || `${caseId}-psychosocial-risk-review`;
+  // Use a local placeholder — the real Band.ai room is created on-demand in trigger-review.
+  const finalBandRoomId = `${caseId}-psychosocial-risk-review`;
 
   const newCase: WorkplaceCase = {
     id: caseId,
@@ -805,13 +805,30 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
   caseItem.status = "reviewing_agents";
   caseItem.updatedAt = new Date().toISOString();
 
-  // Band SDK mode: CareGuard posts the case to Band.ai as Triage Sentinel.
-  // The Python SDK agents (band-agents/agents.py) then orchestrate the rest of the
-  // review entirely within Band.ai via @mentions. Set BAND_SDK_MODE=true in .env
-  // and ensure Triage Sentinel's BAND_API_KEY is set (Remote Agent on Band.ai).
+  // Band SDK mode: create a dedicated Band.ai room for this case, add all agents as
+  // participants, then post the kickoff as Triage Sentinel. The Python SDK agents
+  // (band-agents/agents.py) pick up the new room via their agent_rooms subscription
+  // and orchestrate the review via @mentions without any restart needed.
   const bandSdkMode = process.env.BAND_SDK_MODE === "true";
-  if (bandSdkMode && agentClients.triage?.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
-    const triageKickoff = `🎯 **Triage Sentinel — Case Intake**
+  if (bandSdkMode && agentClients.triage?.isConfigured) {
+    const newRoom = await agentClients.triage.createChatRoom(`CareGuard: ${caseItem.title}`)
+      .catch(e => { console.warn("[Band SDK] createChatRoom failed:", e); return null; });
+
+    if (newRoom?.id) {
+      const roomId = newRoom.id;
+
+      // Add the 5 peer agents as participants (Triage Sentinel is already owner)
+      await Promise.all(
+        [agentsConfig.risk, agentsConfig.policy, agentsConfig.coreNav, agentsConfig.complianceDir, agentsConfig.hrAdvisory]
+          .filter(a => a.id)
+          .map(a => agentClients.triage.addParticipant(roomId, a.id)
+            .catch(e => console.warn(`[Band SDK] addParticipant ${a.displayName} failed:`, e)))
+      );
+
+      caseItem.bandRoomId = roomId;
+      caseItem.updatedAt = new Date().toISOString();
+
+      const triageKickoff = `🎯 **Triage Sentinel — Case Intake**
 
 **Case:** ${caseItem.title}
 **Department:** ${caseItem.department}
@@ -827,20 +844,23 @@ ${caseItem.redactedDescription}
 ${agentsConfig.risk.handle} ${agentsConfig.policy.handle} ${agentsConfig.coreNav.handle} — please assess this case based on the intake above.
 (CC: ${agentsConfig.complianceDir.handle})`;
 
-    const kickoffMentions = [
-      agentsConfig.risk, agentsConfig.policy, agentsConfig.coreNav, agentsConfig.complianceDir
-    ].filter(a => a.id && a.handle).map(a => ({ id: a.id, handle: a.handle, name: a.displayName }));
+      const kickoffMentions = [
+        agentsConfig.risk, agentsConfig.policy, agentsConfig.coreNav, agentsConfig.complianceDir
+      ].filter(a => a.id && a.handle).map(a => ({ id: a.id, handle: a.handle, name: a.displayName }));
 
-    await agentClients.triage.sendTextMessage(caseItem.bandRoomId, triageKickoff, kickoffMentions)
-      .catch(e => console.warn("[Band SDK] Failed to post intake kickoff:", e));
+      await agentClients.triage.sendTextMessage(roomId, triageKickoff, kickoffMentions)
+        .catch(e => console.warn("[Band SDK] Failed to post intake kickoff:", e));
 
-    persistCase(caseItem);
-    return res.json({
-      caseItem,
-      messages: messages[caseId],
-      bandSdkMode: true,
-      bandRoomUrl: `https://app.band.ai/chat/${caseItem.bandRoomId}`,
-    });
+      persistCase(caseItem);
+      return res.json({
+        caseItem,
+        messages: messages[caseId],
+        bandSdkMode: true,
+        bandRoomUrl: `https://app.band.ai/chat/${roomId}`,
+      });
+    }
+
+    console.warn("[Band SDK] Room creation failed — falling through to local LLM pipeline");
   }
 
   // Reset messages to clear any old processed messages other than system init log
