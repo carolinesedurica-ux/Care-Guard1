@@ -1,5 +1,5 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "vite build && npx esbuild server.ts --bundle --platform=node --target=node18 --format=esm --packages=external --outfile=api/server.js",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/server" },
