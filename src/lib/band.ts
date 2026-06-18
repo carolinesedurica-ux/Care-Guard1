@@ -237,6 +237,35 @@ export class BandClient {
   /**
    * Updates the webhook URL for an existing agent via PATCH /api/v1/agents/{handle}
    */
+  /**
+   * Tries to fetch an agent's API key via GET /api/v1/agents/{handle}.
+   * The personal key (band_u_...) has workspace-admin scope and may return the agent key.
+   * Returns null if the endpoint doesn't expose it.
+   */
+  public async fetchAgentApiKey(handle: string, personalApiKey: string): Promise<string | null> {
+    if (!personalApiKey) return null;
+    try {
+      const cleanHandle = handle.replace(/^@/, "");
+      const url = `${this.baseUrl}/api/v1/agents/${cleanHandle}`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${personalApiKey}`,
+          "X-API-Key": personalApiKey,
+        },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const agent = data.agent || data.data || data;
+      const key = agent.api_key || agent.apiKey || agent.token || null;
+      if (key) console.log(`[BandClient] Retrieved API key for ${handle}`);
+      return key;
+    } catch {
+      return null;
+    }
+  }
+
   public async updateWebhook(
     agentHandle: string,
     webhookUrl: string,

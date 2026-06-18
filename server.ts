@@ -210,6 +210,28 @@ async function _initDB() {
     console.error("[DB] MongoDB init failed, using in-memory fallback:", err);
     if (cases.length === 0) preseedCases();
   }
+
+  // Try to fetch agent API keys via personal key so agents can post to Band.ai with own identity
+  const personalKey = process.env.BAND_PERSONAL_API_KEY;
+  if (personalKey) {
+    const keyMap: [string, string][] = [
+      ["triage",        agentsConfig.triage.handle],
+      ["risk",          agentsConfig.risk.handle],
+      ["policy",        agentsConfig.policy.handle],
+      ["coreNav",       agentsConfig.coreNav.handle],
+      ["complianceDir", agentsConfig.complianceDir.handle],
+      ["hrAdvisory",    agentsConfig.hrAdvisory.handle],
+    ];
+    await Promise.all(keyMap.map(async ([key, handle]) => {
+      if (!handle || agentsConfig[key].apiKey) return;
+      const fetchedKey = await managerClient.fetchAgentApiKey(handle, personalKey);
+      if (fetchedKey) {
+        agentsConfig[key].apiKey = fetchedKey;
+        agentClients[key] = new BandClient(fetchedKey);
+        console.log(`[Band] Loaded API key for ${handle}`);
+      }
+    }));
+  }
 }
 
 // Middleware — every API request waits for DB to be ready (fast after first cold-start)
