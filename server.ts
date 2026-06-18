@@ -551,7 +551,7 @@ app.get("/api/admin/agents-status", (_req, res) => {
       displayName: cfg.displayName,
       avatar: cfg.avatar,
       description: cfg.description,
-      provisioned: !!cfg.id && !!cfg.apiKey,
+      provisioned: !!cfg.id && !!cfg.handle,
       handle: cfg.handle || null,
       id: cfg.id || null,
       webhookPath: cfg.webhookPath,
@@ -1999,9 +1999,15 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`CareGuard Server running on http://localhost:${PORT}`);
-  });
+  // Only bind a port when running locally — Vercel's runtime handles the HTTP server
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`CareGuard Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+// Export for Vercel serverless runtime
+export default app;
