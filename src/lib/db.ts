@@ -17,6 +17,8 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (!global._mongooseCache.promise) {
     global._mongooseCache.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
     });
   }
   global._mongooseCache.conn = await global._mongooseCache.promise;
