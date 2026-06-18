@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+.vercel
+band-agents/.venv/
+band-agents/__pycache__/
+band-agents/agent_config.yaml

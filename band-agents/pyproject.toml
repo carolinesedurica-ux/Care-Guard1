@@ -1,0 +1,13 @@
+[project]
+name = "careguard-band-agents"
+version = "0.1.0"
+description = "CareGuard multi-agent workforce connected to Band.ai via the Band SDK"
+requires-python = ">=3.11"
+dependencies = [
+    "band-sdk[anthropic]>=0.1.0",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

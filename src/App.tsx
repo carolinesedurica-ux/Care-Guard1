@@ -250,8 +250,14 @@ export default function App() {
         const data = await res.json();
         setSelectedCase(data.caseItem);
         setRoomMessages(data.messages);
-        showNotification("success", "Multi-Agent audit and consensus compiled successfully.");
-        
+
+        if (data.bandSdkMode && data.bandRoomUrl) {
+          showNotification("success", `Case posted to Band.ai. Agents are deliberating in the room — open it to follow along.`);
+          window.open(data.bandRoomUrl, "_blank", "noopener");
+        } else {
+          showNotification("success", "Multi-Agent audit and consensus compiled successfully.");
+        }
+
         // Update in cases cache
         setCases(prev => prev.map(c => c.id === data.caseItem.id ? data.caseItem : c));
       } else {

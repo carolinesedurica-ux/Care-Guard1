@@ -805,7 +805,43 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
   caseItem.status = "reviewing_agents";
   caseItem.updatedAt = new Date().toISOString();
 
-  // Band.ai internal agents don't support outbound API auth — no room upgrade attempted
+  // Band SDK mode: CareGuard posts the case to Band.ai as Triage Sentinel.
+  // The Python SDK agents (band-agents/agents.py) then orchestrate the rest of the
+  // review entirely within Band.ai via @mentions. Set BAND_SDK_MODE=true in .env
+  // and ensure Triage Sentinel's BAND_API_KEY is set (Remote Agent on Band.ai).
+  const bandSdkMode = process.env.BAND_SDK_MODE === "true";
+  if (bandSdkMode && agentClients.triage?.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
+    const triageKickoff = `🎯 **Triage Sentinel — Case Intake**
+
+**Case:** ${caseItem.title}
+**Department:** ${caseItem.department}
+**Date:** ${caseItem.dateOfIncident}
+**Immediate Safety Concern:** ${caseItem.immediateSafetyConcern}
+**Consent Given:** ${caseItem.consentStatus ? "Yes" : "No"}
+**Policy Category:** ${caseItem.policyCategory}
+**Prior Interventions:** ${caseItem.priorInterventions}
+
+**Redacted Description:**
+${caseItem.redactedDescription}
+
+${agentsConfig.risk.handle} ${agentsConfig.policy.handle} ${agentsConfig.coreNav.handle} — please assess this case based on the intake above.
+(CC: ${agentsConfig.complianceDir.handle})`;
+
+    const kickoffMentions = [
+      agentsConfig.risk, agentsConfig.policy, agentsConfig.coreNav, agentsConfig.complianceDir
+    ].filter(a => a.id && a.handle).map(a => ({ id: a.id, handle: a.handle, name: a.displayName }));
+
+    await agentClients.triage.sendTextMessage(caseItem.bandRoomId, triageKickoff, kickoffMentions)
+      .catch(e => console.warn("[Band SDK] Failed to post intake kickoff:", e));
+
+    persistCase(caseItem);
+    return res.json({
+      caseItem,
+      messages: messages[caseId],
+      bandSdkMode: true,
+      bandRoomUrl: `https://app.band.ai/chat/${caseItem.bandRoomId}`,
+    });
+  }
 
   // Reset messages to clear any old processed messages other than system init log
   const initMsgs = (messages[caseId] || []).filter(m => m.type === "system_log");

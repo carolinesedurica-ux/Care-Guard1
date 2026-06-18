@@ -1,0 +1,30 @@
+# Copy this file to agent_config.yaml and fill in your credentials.
+# agent_id: the UUID from the agent's settings page in Band.ai
+# api_key:  the band_a_... key shown ONCE when you create the agent — store it securely.
+#
+# Each entry here must be a "Remote Agent" created at app.band.ai/agents
+# (New Agent → Remote Agent type). Internal agents do NOT have API keys.
+
+triage_sentinel:
+  agent_id: "ef1b8262-20a3-40c9-be82-91d4a6bb4483"
+  api_key: "<paste-band_a_-key-here>"
+
+risk_analytics_engine:
+  agent_id: "21eb4dbb-af44-4ea9-b9df-65cf0772730a"
+  api_key: "<paste-band_a_-key-here>"
+
+policy_guard:
+  agent_id: "ba9ba7a5-94a8-4847-8103-6875b358b7b7"
+  api_key: "<paste-band_a_-key-here>"
+
+core_navigator:
+  agent_id: "d44e8aac-47ec-4984-8e86-7b5ae94f8628"
+  api_key: "<paste-band_a_-key-here>"
+
+compliance_review_director:
+  agent_id: "f4f2e6ac-31eb-4261-8dd7-273c66ce3d4b"
+  api_key: "<paste-band_a_-key-here>"
+
+hr_advisory:
+  agent_id: "23a9b590-0f67-4910-8cb5-e4987a68e3ed"
+  api_key: "<paste-band_a_-key-here>"
