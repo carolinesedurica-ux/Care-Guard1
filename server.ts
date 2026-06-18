@@ -706,8 +706,8 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
     }
   }
 
-  // Band.ai internal agents don't support outbound API auth — rooms are local.
-  const finalBandRoomId = `${caseId}-psychosocial-risk-review`;
+  // Use the shared Band.ai room if configured; otherwise fall back to a local ID.
+  const finalBandRoomId = process.env.BAND_DEFAULT_ROOM_ID || `${caseId}-psychosocial-risk-review`;
 
   const newCase: WorkplaceCase = {
     id: caseId,
@@ -748,6 +748,28 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
   persistMessage(initMsg);
 
   res.status(201).json(newCase);
+});
+
+// Link an existing case to a real Band.ai room
+app.patch("/api/cases/:id/band-room", async (req, res) => {
+  const caseItem = cases.find(c => c.id === req.params.id);
+  if (!caseItem) return res.status(404).json({ error: "Case not found" });
+  const { bandRoomId } = req.body;
+  if (!bandRoomId) return res.status(400).json({ error: "bandRoomId required" });
+  caseItem.bandRoomId = bandRoomId;
+  caseItem.updatedAt = new Date().toISOString();
+  persistCase(caseItem);
+
+  // Add all provisioned agents as participants so Band.ai routes mentions correctly
+  if (managerClient.isConfigured) {
+    for (const cfg of Object.values(agentsConfig)) {
+      if (cfg.handle) {
+        managerClient.addParticipant(bandRoomId, cfg.id, cfg.handle)
+          .catch(e => console.warn(`[Band] addParticipant ${cfg.handle} failed:`, e));
+      }
+    }
+  }
+  res.json({ success: true, bandRoomId });
 });
 
 // 4. Trigger Multi-Agent Discussion using Gemini AI (Sequential/Debate Pipeline)
