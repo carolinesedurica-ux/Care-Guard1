@@ -1000,104 +1000,32 @@ ${docDataString}`;
 
       addMsg("triage_agent", process.env.BAND_AGENT_HANDLE ? `Triage Sentinel (${process.env.BAND_AGENT_HANDLE})` : "Triage Sentinel", triageResult.readMarkdown, "agent_report", triageResult, "🎯");
 
-      // 2. Risk Agent Call (Llama on AI/ML API)
-      const riskPrompt = `Psychosocial risk analysis based on:
+      // 2+3+4. Risk + Policy + Care — run in PARALLEL (all depend only on triageResult)
+      const riskPrompt = `Psychosocial risk analysis based on triage findings:
 Triage: ${JSON.stringify(triageResult)}
 
 ${docDataString}
 
-Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON, and do not return the example values verbatim — base every field on the actual case details above:
+Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON:
 {
   "readMarkdown": "High-contrast Markdown summary of risk vectors found and your professional justification.",
   "riskFlags": ["severe_distress", "retaliation_probability"],
   "recommendedRiskLevel": "low | moderate | high | critical"
 }`;
-      let riskTextRaw = "";
-      try {
-        riskTextRaw = await runOpenAICompatibleCompletion({
-          model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-          systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. You analyze workplace legal, safety, physiological, psychosocial, and corporate liabilities. Perform a psychosocial risk study. Return JSON matching the schema.",
-          userPrompt: riskPrompt
-        });
-      } catch (e) {
-        console.warn("Risk Analytics Engine failed via Llama, falling back to GPT-4o-mini:", e);
-        riskTextRaw = await runOpenAICompatibleCompletion({
-          model: "gpt-4o-mini",
-          systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. You analyze workplace legal, safety, physiological, psychosocial, and corporate liabilities. Perform a psychosocial risk study. Return JSON matching the schema.",
-          userPrompt: riskPrompt
-        });
-      }
 
-      let riskResult = {
-        readMarkdown: "High levels of anxiety noted. Disciplinary tracks pose retaliation vulnerability.",
-        riskFlags: ["psychological_distress", "legal_retaliation"],
-        recommendedRiskLevel: "high"
-      };
-
-      try {
-        const cleaned = riskTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        riskResult = { ...riskResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse Risk Agent JSON:", e);
-        riskResult.readMarkdown = riskTextRaw || riskResult.readMarkdown;
-      }
-
-      addMsg("risk_agent", "Risk Analytics Engine", riskResult.readMarkdown, "agent_report", riskResult, "⚠️");
-
-      // 3. Policy Agent Call (DeepSeek on AI/ML API)
-      const policyPrompt = `Evaluate compliance constraints based on:
+      const policyPrompt = `Evaluate compliance constraints based on triage findings:
 Triage: ${JSON.stringify(triageResult)}
-Risk: ${JSON.stringify(riskResult)}
 
 ${docDataString}
 
-Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON, and do not return the example values verbatim — base every field on the actual case details above:
+Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON:
 {
   "readMarkdown": "Policy and compliance checklist in Markdown. Highlight specific legal risks and documentation requirements.",
   "complianceRisk": "low | moderate | high | critical"
 }`;
-      let policyTextRaw = "";
-      try {
-        policyTextRaw = await runOpenAICompatibleCompletion({
-          model: "deepseek/deepseek-chat-v3.1",
-          systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. You map workplace cases to legal directives, employer Duty of Care laws, EAP boundaries, and strict consent protections. Return JSON.",
-          userPrompt: policyPrompt
-        });
-      } catch (e) {
-        console.warn("Policy Guard failed on DeepSeek, falling back to gpt-4o-mini:", e);
-        policyTextRaw = await runOpenAICompatibleCompletion({
-          model: "gpt-4o-mini",
-          systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. You map workplace cases to legal directives, employer Duty of Care laws, EAP boundaries, and strict consent protections. Return JSON.",
-          userPrompt: policyPrompt
-        });
-      }
 
-      let policyResult = {
-        readMarkdown: "Must respect non-disclosure. Disciplinary proceedings must be temporarily stayed.",
-        complianceRisk: "high"
-      };
-
-      try {
-        const cleaned = policyTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        policyResult = { ...policyResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse Policy Agent JSON:", e);
-        policyResult.readMarkdown = policyTextRaw || policyResult.readMarkdown;
-      }
-
-      addMsg("policy_compliance_agent", "Policy Guard", policyResult.readMarkdown, "agent_report", policyResult, "📜");
-
-      // 4. Care Agent Call (gpt-4o-mini on AI/ML API — fast & reliable)
-      let careTextRaw = "";
-      try {
-        careTextRaw = await runOpenAICompatibleCompletion({
-          model: "gpt-4o-mini",
-          timeoutMs: 28000,
-          systemPrompt: "You are the Care Pathway Agent (named Core Navigator) for CareGuard. Draft actionable wellness adjustments: EAP referrals, supervisor decoupling, wellness leaves. Be concise.",
-          userPrompt: `Suggest care pathways based on:
+      const carePromptText = `Suggest care pathways based on triage findings:
 Triage: ${JSON.stringify(triageResult)}
-Risk: ${JSON.stringify(riskResult)}
-Policy: ${JSON.stringify(policyResult)}
 
 ${docDataString}
 
@@ -1105,30 +1033,31 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
 {
   "readMarkdown": "Markdown list of recommended care pathways, referrals, and concrete immediate actions.",
   "recommendedActions": ["List of short action names"]
-}`
-        });
-      } catch (errCare) {
-        console.warn("Core Navigator LLM call failed or timed out, using built-in fallback:", errCare);
-        // Use hardcoded fallback — do NOT make another API call here to avoid double-queue
-        careTextRaw = JSON.stringify({
-          readMarkdown: `**Core Navigator — Care Pathway (Auto-Generated):**\n- Arrange confidential EAP counselor referral within 24 hours\n- Implement temporary supervisor decoupling (route deliverables via HR proxy)\n- Issue provisional modified work schedule to reduce psychological strain\n- Document employee consent and wellness plan activation`,
-          recommendedActions: ["EAP referral", "Supervisor decoupling", "Modified work schedule", "Wellness log activation"]
-        });
-      }
+}`;
 
-      let careResult = {
-        readMarkdown: "Arrange external clinical counselor. Decouple reporting line.",
-        recommendedActions: ["EAP consultation", "Supervisor decoupled communication"]
-      };
+      const riskFallback = JSON.stringify({ readMarkdown: "High levels of anxiety noted. Disciplinary tracks pose retaliation vulnerability.", riskFlags: ["psychological_distress", "legal_retaliation"], recommendedRiskLevel: "high" });
+      const policyFallback = JSON.stringify({ readMarkdown: "Must respect non-disclosure. Disciplinary proceedings must be temporarily stayed.", complianceRisk: "high" });
+      const careFallback = JSON.stringify({ readMarkdown: "**Core Navigator — Care Pathway:**\n- Arrange confidential EAP counselor referral within 24 hours\n- Implement temporary supervisor decoupling (route deliverables via HR proxy)\n- Issue provisional modified work schedule\n- Document employee consent and wellness plan activation", recommendedActions: ["EAP referral", "Supervisor decoupling", "Modified work schedule"] });
 
-      try {
-        const cleaned = careTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        careResult = { ...careResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse Care Agent JSON:", e);
-        careResult.readMarkdown = careTextRaw || careResult.readMarkdown;
-      }
+      const [riskTextRaw, policyTextRaw, careTextRaw] = await Promise.all([
+        runOpenAICompatibleCompletion({ model: "meta-llama/Llama-3.3-70B-Instruct-Turbo", timeoutMs: 12000, systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. Analyze workplace legal, safety, psychosocial liabilities. Return JSON matching schema.", userPrompt: riskPrompt })
+          .catch(() => runOpenAICompatibleCompletion({ model: "gpt-4o-mini", timeoutMs: 10000, systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. Return JSON.", userPrompt: riskPrompt }).catch(() => riskFallback)),
+        runOpenAICompatibleCompletion({ model: "deepseek/deepseek-chat-v3.1", timeoutMs: 12000, systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. Map cases to legal directives, Duty of Care laws, EAP boundaries. Return JSON.", userPrompt: policyPrompt })
+          .catch(() => runOpenAICompatibleCompletion({ model: "gpt-4o-mini", timeoutMs: 10000, systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. Return JSON.", userPrompt: policyPrompt }).catch(() => policyFallback)),
+        runOpenAICompatibleCompletion({ model: "gpt-4o-mini", timeoutMs: 12000, systemPrompt: "You are the Care Pathway Agent (named Core Navigator) for CareGuard. Draft actionable wellness adjustments: EAP referrals, supervisor decoupling, wellness leaves. Be concise. Return JSON.", userPrompt: carePromptText })
+          .catch(() => careFallback),
+      ]);
 
+      let riskResult = { readMarkdown: "High levels of anxiety noted. Disciplinary tracks pose retaliation vulnerability.", riskFlags: ["psychological_distress", "legal_retaliation"], recommendedRiskLevel: "high" };
+      let policyResult = { readMarkdown: "Must respect non-disclosure. Disciplinary proceedings must be temporarily stayed.", complianceRisk: "high" };
+      let careResult = { readMarkdown: "Arrange external clinical counselor. Decouple reporting line.", recommendedActions: ["EAP consultation", "Supervisor decoupled communication"] };
+
+      try { riskResult = { ...riskResult, ...JSON.parse(riskTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { riskResult.readMarkdown = riskTextRaw || riskResult.readMarkdown; }
+      try { policyResult = { ...policyResult, ...JSON.parse(policyTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { policyResult.readMarkdown = policyTextRaw || policyResult.readMarkdown; }
+      try { careResult = { ...careResult, ...JSON.parse(careTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { careResult.readMarkdown = careTextRaw || careResult.readMarkdown; }
+
+      addMsg("risk_agent", "Risk Analytics Engine", riskResult.readMarkdown, "agent_report", riskResult, "⚠️");
+      addMsg("policy_compliance_agent", "Policy Guard", policyResult.readMarkdown, "agent_report", policyResult, "📜");
       addMsg("care_pathway_agent", "Care Navigator", careResult.readMarkdown, "agent_report", careResult, "🌱");
 
       // 5. Review Agent Debate/Challenge Compilation (gpt-4o-mini — fast)
@@ -1136,7 +1065,7 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
       try {
         reviewTextRaw = await runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
-          timeoutMs: 28000,
+          timeoutMs: 10000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Challenge peer recommendations with hard questions. Be concise.",
           userPrompt: `Challenge peer agents based on:
 Triage: ${JSON.stringify(triageResult)}
@@ -1177,7 +1106,7 @@ Respond with a raw JSON object. Do not output anything other than raw JSON:
       try {
         repliesTextRaw = await runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
-          timeoutMs: 28000,
+          timeoutMs: 10000,
           systemPrompt: "You are the automated responder for CareGuard Peer Debate. Represent Risk Analytics Engine and Policy Guard. Be concise.",
           userPrompt: `Answer this challenge: "${reviewResult.challengePost}"
 
@@ -1215,7 +1144,7 @@ Respond with raw JSON only:
       try {
         memoTextRaw = await runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
-          timeoutMs: 28000,
+          timeoutMs: 10000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Compile the FINAL human-review memo for HR directors. Be precise and actionable.",
           userPrompt: `Compile final memo based on:
 Triage: ${JSON.stringify(triageResult)}
@@ -1296,7 +1225,7 @@ The room state variables have been refreshed. Sealed record routed for final sig
       try {
         hrTextRaw = await runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
-          timeoutMs: 28000,
+          timeoutMs: 10000,
           systemPrompt: "You are the HR Advisory Agent for CareGuard. Propose a collaborative consultative step-by-step action plan based on the final compliance memo. Be precise, structured, and action-oriented.",
           userPrompt: `Propose an HR action plan based on:
 Final Memo: ${JSON.stringify(memoResult)}
@@ -1882,7 +1811,7 @@ Respond now as ${def.displayName}.`;
   try {
     responseText = await runOpenAICompatibleCompletion({
       model: "gpt-4o-mini",
-      timeoutMs: 30000,
+      timeoutMs: 12000,
       systemPrompt: def.systemPrompt,
       userPrompt,
     });
