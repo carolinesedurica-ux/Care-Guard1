@@ -1915,6 +1915,11 @@ app.post("/api/webhooks/hrAdvisory",   (req, res) => webhookHandler("hrAdvisory"
 
 // Serve the Vite App
 async function startServer() {
+  if (process.env.VERCEL) {
+    // On Vercel: static files are served by Vercel's CDN from dist/; Express handles API only.
+    return;
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -1945,12 +1950,9 @@ async function startServer() {
     });
   }
 
-  // Only bind a port when running locally — Vercel's runtime handles the HTTP server
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`CareGuard Server running on http://localhost:${PORT}`);
-    });
-  }
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`CareGuard Server running on http://localhost:${PORT}`);
+  });
 }
 
 startServer();
