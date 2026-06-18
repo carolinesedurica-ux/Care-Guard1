@@ -4,6 +4,9 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { WorkplaceCase, BandMessage, AgentRole, FinalMemo } from "./src/types";
 import { BandClient } from "./src/lib/band";
+import { connectDB } from "./src/lib/db";
+import { CaseModel } from "./src/models/CaseModel";
+import { MessageModel } from "./src/models/MessageModel";
 
 dotenv.config();
 
@@ -161,9 +164,56 @@ async function runOpenAICompatibleCompletion(options: {
   }
 }
 
-// In-Memory Database for Case Rooms
+// Working store — populated from MongoDB on first request; written through on every mutation
 let cases: WorkplaceCase[] = [];
 let messages: Record<string, BandMessage[]> = {};
+
+// ---- DB helpers ----
+function persistCase(c: WorkplaceCase) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  CaseModel.replaceOne({ id: c.id }, c as any, { upsert: true }).catch(e => console.warn("[DB] case save failed:", e));
+}
+function persistMessage(m: BandMessage) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  MessageModel.replaceOne({ id: m.id }, m as any, { upsert: true }).catch(e => console.warn("[DB] message save failed:", e));
+}
+
+// One-shot promise that loads cases+messages from DB into memory (or seeds if empty)
+let _dbReady: Promise<void> | null = null;
+function ensureDB(): Promise<void> {
+  if (!_dbReady) _dbReady = _initDB();
+  return _dbReady;
+}
+async function _initDB() {
+  try {
+    await connectDB();
+    const dbCases = (await CaseModel.find({}).lean().exec()) as unknown as WorkplaceCase[];
+    if (dbCases.length === 0) {
+      // First run — seed DB with demo data then load into memory
+      preseedCases();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await CaseModel.insertMany(cases as any[]);
+      const allMsgs = Object.values(messages).flat();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (allMsgs.length) await MessageModel.insertMany(allMsgs as any[]);
+    } else {
+      cases = dbCases;
+      const dbMsgs = (await MessageModel.find({}).lean().exec()) as unknown as BandMessage[];
+      messages = {};
+      for (const msg of dbMsgs) {
+        if (!messages[msg.caseId]) messages[msg.caseId] = [];
+        messages[msg.caseId].push(msg);
+      }
+    }
+    console.log(`[DB] Loaded ${cases.length} cases from MongoDB`);
+  } catch (err) {
+    console.error("[DB] MongoDB init failed, using in-memory fallback:", err);
+    if (cases.length === 0) preseedCases();
+  }
+}
+
+// Middleware — every API request waits for DB to be ready (fast after first cold-start)
+app.use("/api", (_req, _res, next) => { ensureDB().then(next).catch(() => next()); });
 
 // Helper to pre-seed cases and reviews so the app has instant high-fidelity content
 function preseedCases() {
@@ -378,8 +428,7 @@ function preseedCases() {
   };
 }
 
-// Initial hydration
-preseedCases();
+// DB init fires on first API request (see middleware above)
 
 // ---------------------- API Endpoints ----------------------
 
@@ -695,6 +744,8 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
 
   cases.unshift(newCase);
   messages[caseId] = [initMsg];
+  persistCase(newCase);
+  persistMessage(initMsg);
 
   res.status(201).json(newCase);
 });
@@ -715,6 +766,7 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
   // Reset messages to clear any old processed messages other than system init log
   const initMsgs = (messages[caseId] || []).filter(m => m.type === "system_log");
   messages[caseId] = initMsgs;
+  MessageModel.deleteMany({ caseId, type: { $ne: "system_log" } }).catch(e => console.warn("[DB] message reset failed:", e));
 
   // Local helper to append message & simulate timeline
   const addMsg = (agent: AgentRole, agentName: string, content: string, type: any, struct?: any, avatar?: string) => {
@@ -764,6 +816,7 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
       agentAvatar: avatar
     };
     messages[caseId].push(newMsg);
+    persistMessage(newMsg);
 
     // Post to Band.ai using the agent's own client if provisioned, else fall back to Triage Sentinel
     const agentKeyMap: Record<AgentRole, string> = {
@@ -874,7 +927,7 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
       // 8. HR Advisory Call (Simulation Fallback)
       const hrText = `💬 **Consultative advisory received. Step-by-step action plan follows.**\n\nHaving reviewed all peer assessments and the Director's consolidated memo, I am proposing the following collaborative resolution pathway for case manager confirmation. This plan is consultative — each step requires stakeholder agreement before execution.\n\n**Immediate Actions (0–24h):**\n• **Step 1** — HR Manager contacts the affected individual directly and confidentially to confirm understanding of rights and available support. No operational manager involvement at this stage.\n• **Step 2** — Activate the supervisor decoupling protocol. HR coordinates temporary reporting realignment — this is not punitive to the supervisor; it is a protective measure for the affected individual.\n• **Step 3** — EAP referral letter prepared and delivered to the individual by HR.\n\n**Short-Term (24–72h):**\n• **Step 4** — HR convenes a confidential briefing with the site Safety Committee. Purpose: share the systemic finding and initiate the roster audit without attributing blame to individuals.\n• **Step 5** — HR prepares the WorkSafe notification draft in consultation with the legal team.\n• **Step 6** — HR schedules a structured welfare check with the affected individual.`;
       addMsg("hr_advisory", "HR Advisory", hrText, "agent_report", null, "👔");
-
+      persistCase(caseItem);
       return res.json({ caseItem, messages: messages[caseId] });
     } catch (simError) {
       return res.status(500).json({ error: "Failed to simulate local multi-agent workflow" });
@@ -1273,7 +1326,7 @@ Respond with a raw JSON object matching this schema:
       }
 
       addMsg("hr_advisory", "HR Advisory", hrResult.readMarkdown, "agent_report", hrResult, "👔");
-
+      persistCase(caseItem);
       return res.json({ caseItem, messages: messages[caseId] });
 
     } catch (err: any) {
@@ -1637,6 +1690,7 @@ app.post("/api/cases/:id/human-action", async (req, res) => {
   };
 
   messages[caseId].push(humanMsg);
+  persistMessage(humanMsg);
 
   // Sync human decision to Band.ai
   if (managerClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
@@ -1662,6 +1716,7 @@ app.post("/api/cases/:id/human-action", async (req, res) => {
       type: "system_log"
     };
     messages[caseId].push(confirmMsg);
+    persistMessage(confirmMsg);
 
     // Sync closing message to Band.ai
     if (managerClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
@@ -1671,6 +1726,7 @@ app.post("/api/cases/:id/human-action", async (req, res) => {
     }
   }
 
+  persistCase(caseItem);
   res.json({ caseItem, messages: messages[caseId] });
 });
 
@@ -1861,7 +1917,7 @@ Respond now as ${def.displayName}.`;
 
   // Mirror into in-app message store so the UI stays in sync
   messages[caseItem.id] = messages[caseItem.id] || [];
-  messages[caseItem.id].push({
+  const webhookMsg: BandMessage = {
     id: `m-${caseItem.id}-wb-${Date.now()}`,
     caseId: caseItem.id,
     agent: def.role,
@@ -1870,7 +1926,9 @@ Respond now as ${def.displayName}.`;
     content: formattedContent,
     timestamp: new Date().toISOString(),
     type: "agent_report",
-  } as BandMessage);
+  };
+  messages[caseItem.id].push(webhookMsg);
+  persistMessage(webhookMsg);
 
   // If agent has its own API key, also post via REST for richer mention support
   if (ownClient.isConfigured) {
