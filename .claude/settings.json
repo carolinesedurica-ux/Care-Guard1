@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://api.aimlapi.com/models\" -H \"Authorization: Bearer e5167dd78c12da9f72e27d056f1c610c\" -o .tmp/aiml_models.json -w \"HTTP_STATUS:%{http_code}\\\\n\")",
+      "Bash(npm run *)",
+      "Bash(echo \"started with PID $!\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

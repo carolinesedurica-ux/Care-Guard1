@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { WorkplaceCase, BandMessage, AgentRole, FinalMemo } from "./src/types";
 import { BandClient } from "./src/lib/band";
@@ -12,65 +12,95 @@ const app = express();
 app.use(express.json());
 const PORT = 3000;
 
-// Setup all five agents requested by the user, providing dynamic env keys and hardcoded fallbacks as fallback guarantees
-const agentsConfig = {
+// Agent registry — each entry holds identity + credentials.
+// Triage Sentinel is the only pre-provisioned real Band.ai agent.
+// The other five are created on Band.ai at runtime via /api/admin/provision-agents.
+const agentsConfig: Record<string, {
+  id: string; apiKey: string; handle: string;
+  displayName: string; avatar: string; description: string; webhookPath: string;
+}> = {
   triage: {
-    id: process.env.BAND_AGENT_ID || "triage-sentinel",
+    id: process.env.BAND_AGENT_ID || "",
     apiKey: process.env.BAND_API_KEY || "",
-    handle: process.env.BAND_AGENT_HANDLE || "@pameltex3237/triage-sentinel"
+    handle: process.env.BAND_AGENT_HANDLE || "@pameltex3237/triage-sentinel",
+    displayName: "Triage Sentinel",
+    avatar: "🎯",
+    description: "Primary case intake, classification and urgency triage for CareGuard.",
+    webhookPath: "/api/webhooks/triage",
   },
   risk: {
-    id: process.env.BAND_RISK_AGENT_ID || "b979fe31-63be-420f-8b0c-e58f9cb6aca8",
-    apiKey: process.env.BAND_RISK_API_KEY || "band_a_1781438994_Liryv_c_nQOJRfV3QXcPmoaBvZtB6WGY",
-    handle: process.env.BAND_RISK_HANDLE || "@pameltex3237/remote-analytic-engine"
+    id: process.env.BAND_RISK_AGENT_ID || "",
+    apiKey: process.env.BAND_RISK_API_KEY || "",
+    handle: process.env.BAND_RISK_HANDLE || "",
+    displayName: "Risk Analytics Engine",
+    avatar: "⚠️",
+    description: "Analyses psychosocial, legal, and retaliation risk vectors for workplace cases.",
+    webhookPath: "/api/webhooks/risk",
   },
   policy: {
-    id: process.env.BAND_POLICY_AGENT_ID || "0a133bf6-158f-435c-8629-4a9e2f51dd8e",
-    apiKey: process.env.BAND_POLICY_API_KEY || "band_a_1781439245_41-AvW0SBX3tztcf1qxtiDDf1IDlsL-K",
-    handle: process.env.BAND_POLICY_HANDLE || "@pameltex3237/policy-guard"
+    id: process.env.BAND_POLICY_AGENT_ID || "",
+    apiKey: process.env.BAND_POLICY_API_KEY || "",
+    handle: process.env.BAND_POLICY_HANDLE || "",
+    displayName: "Policy Guard",
+    avatar: "📜",
+    description: "Maps cases to Duty of Care laws, confidentiality rules, and EAP obligations.",
+    webhookPath: "/api/webhooks/policy",
   },
   coreNav: {
-    id: process.env.BAND_CORE_NAV_AGENT_ID || "db0aeacd-62a7-4d3a-8fac-e0a6dffbb5a0",
-    apiKey: process.env.BAND_CORE_NAV_API_KEY || "band_a_1781439721_v7-dUNEVLjxsSWApxtluvH5ar8Nskzsg",
-    handle: process.env.BAND_CORE_NAV_HANDLE || "@pameltex3237/core-navigator"
+    id: process.env.BAND_CORE_NAV_AGENT_ID || "",
+    apiKey: process.env.BAND_CORE_NAV_API_KEY || "",
+    handle: process.env.BAND_CORE_NAV_HANDLE || "",
+    displayName: "Core Navigator",
+    avatar: "🌱",
+    description: "Designs EAP referrals, supervisor-decoupling steps, and wellness action plans.",
+    webhookPath: "/api/webhooks/coreNav",
   },
   complianceDir: {
-    id: process.env.BAND_COMPLIANCE_DIR_AGENT_ID || "00a546d7-5a8f-4957-8816-619fd5c72d25",
-    apiKey: process.env.BAND_COMPLIANCE_DIR_API_KEY || "band_a_1781439944__QgNunPhFKTfQ8JOUHoKD_cVu5CV18tD",
-    handle: process.env.BAND_COMPLIANCE_DIR_HANDLE || "@pameltex3237/compliance-review-direct"
+    id: process.env.BAND_COMPLIANCE_DIR_AGENT_ID || "",
+    apiKey: process.env.BAND_COMPLIANCE_DIR_API_KEY || "",
+    handle: process.env.BAND_COMPLIANCE_DIR_HANDLE || "",
+    displayName: "Compliance Review Director",
+    avatar: "⚖️",
+    description: "Challenges peer recommendations and compiles the final human-review advisory memo.",
+    webhookPath: "/api/webhooks/complianceDir",
   },
   hrAdvisory: {
-    id: process.env.BAND_HR_ADVISORY_AGENT_ID || "cc4f5c79-2d1b-468b-bc84-761438a69ee3",
-    apiKey: process.env.BAND_HR_ADVISORY_API_KEY || "band_a_1781455629_4sHquzl5Sk0A-flklIuin6586f-j6RuC",
-    handle: process.env.BAND_HR_ADVISORY_HANDLE || "@pameltex3237/hr-advisory"
-  }
+    id: process.env.BAND_HR_ADVISORY_AGENT_ID || "",
+    apiKey: process.env.BAND_HR_ADVISORY_API_KEY || "",
+    handle: process.env.BAND_HR_ADVISORY_HANDLE || "",
+    displayName: "HR Advisory",
+    avatar: "👔",
+    description: "Produces consultative step-by-step HR action plans from the final compliance memo.",
+    webhookPath: "/api/webhooks/hrAdvisory",
+  },
 };
 
-const bandClient = new BandClient(agentsConfig.triage.apiKey);
-const riskClient = new BandClient(agentsConfig.risk.apiKey);
-const policyClient = new BandClient(agentsConfig.policy.apiKey);
-const coreNavClient = new BandClient(agentsConfig.coreNav.apiKey);
-const complianceDirClient = new BandClient(agentsConfig.complianceDir.apiKey);
-const hrAdvisoryClient = new BandClient(agentsConfig.hrAdvisory.apiKey);
-
-function getRoomCreatorClient(): BandClient {
-  if (bandClient.isConfigured) return bandClient;
-  if (complianceDirClient.isConfigured) return complianceDirClient;
-  if (hrAdvisoryClient.isConfigured) return hrAdvisoryClient;
-  if (riskClient.isConfigured) return riskClient;
-  if (policyClient.isConfigured) return policyClient;
-  if (coreNavClient.isConfigured) return coreNavClient;
-  return bandClient;
+// Per-agent Band.ai clients — each agent posts with its own identity once provisioned.
+// All agents are internal — no agent API keys needed; responses are returned inline via webhooks.
+const agentClients: Record<string, BandClient> = {};
+for (const [key, cfg] of Object.entries(agentsConfig)) {
+  agentClients[key] = new BandClient(cfg.apiKey);
 }
 
-function isAnyBandClientConfigured(): boolean {
-  return bandClient.isConfigured || 
-         riskClient.isConfigured || 
-         policyClient.isConfigured || 
-         coreNavClient.isConfigured || 
-         complianceDirClient.isConfigured ||
-         hrAdvisoryClient.isConfigured;
+// Manager client uses the personal workspace key for room creation, participant management,
+// and event posting — operations that require workspace-level authority, not an agent key.
+// All 6 agents are internal (no agent API keys); they respond via inline webhook responses.
+const managerClient = new BandClient(process.env.BAND_PERSONAL_API_KEY);
+
+// Adds all provisioned agents (except the room creator) as participants to a Band.ai room.
+// Called whenever a real room is created or upgraded from a local placeholder.
+async function addAllAgentsToRoom(roomId: string): Promise<void> {
+  for (const [_key, cfg] of Object.entries(agentsConfig)) {
+    if (!cfg.handle) continue; // skip unprovisioned
+    try {
+      await managerClient.addParticipant(roomId, cfg.id, cfg.handle);
+      console.log(`[Band] Added ${cfg.displayName} (${cfg.handle}) to room ${roomId}`);
+    } catch (err) {
+      console.warn(`[Band] Failed to add ${cfg.displayName} to room ${roomId}:`, err);
+    }
+  }
 }
+
 
 // Initialize Gemini SDK with named parameters & headers as instructed by rules
 const apiKey = process.env.GEMINI_API_KEY || "";
@@ -90,22 +120,20 @@ if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
   }
 }
 
-// Helper to call OpenAI-compatible endpoints (Featherless & AI/ML API)
+// Helper to call the AI/ML API (OpenAI-compatible endpoint)
 // Uses a 30-second AbortController timeout to prevent agents from hanging in queue
 async function runOpenAICompatibleCompletion(options: {
-  provider: "featherless" | "aiml";
   model: string;
   systemPrompt: string;
   userPrompt: string;
   timeoutMs?: number;
 }): Promise<string> {
-  const provider = options.provider;
-  const key = provider === "featherless" ? process.env.FEATHERLESS_API_KEY : process.env.AIML_API_KEY;
-  const baseUrl = provider === "featherless" ? "https://api.featherless.ai/v1" : "https://api.aimlapi.com/v1";
+  const key = process.env.AIML_API_KEY;
+  const baseUrl = "https://api.aimlapi.com/v1";
   const timeoutMs = options.timeoutMs ?? 30000; // 30s default timeout
 
   if (!key) {
-    throw new Error(`API Key for ${provider} is missing. Please check your config.`);
+    throw new Error("API Key for AIML is missing. Please check your config.");
   }
 
   const controller = new AbortController();
@@ -132,13 +160,13 @@ async function runOpenAICompatibleCompletion(options: {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`[${provider.toUpperCase()} API Error] Code ${response.status}: ${errorText}`);
+      throw new Error(`[AIML API Error] Code ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
     if (!text) {
-      throw new Error(`[${provider.toUpperCase()} API Error] Empty response`);
+      throw new Error("[AIML API Error] Empty response");
     }
     return text;
   } finally {
@@ -378,86 +406,229 @@ app.get("/api/cases", (req, res) => {
 });
 
 // Get Active Config Context
-app.get("/api/config", (req, res) => {
+app.get("/api/config", (_req, res) => {
+  const buildAgentInfo = (key: string) => ({
+    id: agentsConfig[key].id,
+    handle: agentsConfig[key].handle,
+    displayName: agentsConfig[key].displayName,
+    avatar: agentsConfig[key].avatar,
+    hasKey: !!agentsConfig[key].apiKey,
+    provisioned: !!agentsConfig[key].id && !!agentsConfig[key].handle,
+    webhookPath: agentsConfig[key].webhookPath,
+  });
   res.json({
     hasGemini: !!ai,
+    personalKeyConfigured: !!process.env.BAND_PERSONAL_API_KEY,
     bandAgent: {
-      id: process.env.BAND_AGENT_ID || "triage-sentinel-id",
-      hasKey: isAnyBandClientConfigured(),
-      handle: process.env.BAND_AGENT_HANDLE || "@pameltex3237/triage-sentinel",
+      id: agentsConfig.triage.id,
+      hasKey: managerClient.isConfigured,
+      handle: agentsConfig.triage.handle,
       agents: {
-        triage: {
-          id: agentsConfig.triage.id,
-          handle: agentsConfig.triage.handle,
-          hasKey: bandClient.isConfigured
-        },
-        risk: {
-          id: agentsConfig.risk.id,
-          handle: agentsConfig.risk.handle,
-          hasKey: riskClient.isConfigured
-        },
-        policy: {
-          id: agentsConfig.policy.id,
-          handle: agentsConfig.policy.handle,
-          hasKey: policyClient.isConfigured
-        },
-        coreNav: {
-          id: agentsConfig.coreNav.id,
-          handle: agentsConfig.coreNav.handle,
-          hasKey: coreNavClient.isConfigured
-        },
-        complianceDir: {
-          id: agentsConfig.complianceDir.id,
-          handle: agentsConfig.complianceDir.handle,
-          hasKey: complianceDirClient.isConfigured
-        },
-        hrAdvisory: {
-          id: agentsConfig.hrAdvisory.id,
-          handle: agentsConfig.hrAdvisory.handle,
-          hasKey: hrAdvisoryClient.isConfigured
-        }
+        triage:        buildAgentInfo("triage"),
+        risk:          buildAgentInfo("risk"),
+        policy:        buildAgentInfo("policy"),
+        coreNav:       buildAgentInfo("coreNav"),
+        complianceDir: buildAgentInfo("complianceDir"),
+        hrAdvisory:    buildAgentInfo("hrAdvisory"),
       }
     }
   });
 });
 
-// Test Connection to Band.ai
+// Test Connection to Band.ai — uses workspace personal key
 app.post("/api/config/test-band", async (req, res) => {
   try {
-    const testPromises = [];
-    if (bandClient.isConfigured) testPromises.push(bandClient.testConnection().then(r => ({ name: "Triage Sentinel", res: r })));
-    if (riskClient.isConfigured) testPromises.push(riskClient.testConnection().then(r => ({ name: "Risk Analytics Engine", res: r })));
-    if (policyClient.isConfigured) testPromises.push(policyClient.testConnection().then(r => ({ name: "Policy Guard", res: r })));
-    if (coreNavClient.isConfigured) testPromises.push(coreNavClient.testConnection().then(r => ({ name: "Core Navigator", res: r })));
-    if (complianceDirClient.isConfigured) testPromises.push(complianceDirClient.testConnection().then(r => ({ name: "Compliance Review Director", res: r })));
-    if (hrAdvisoryClient.isConfigured) testPromises.push(hrAdvisoryClient.testConnection().then(r => ({ name: "HR Advisory", res: r })));
-
-    const results = await Promise.all(testPromises);
-    const successful = results.filter(r => r.res.success);
-
-    if (successful.length > 0) {
-      const activeAgent = successful[0];
-      res.json({
-        success: true,
-        agent: {
-          name: activeAgent.name,
-          handle: activeAgent.name === "Triage Sentinel" ? agentsConfig.triage.handle : 
-                 activeAgent.name === "Risk Analytics Engine" ? agentsConfig.risk.handle :
-                 activeAgent.name === "Policy Guard" ? agentsConfig.policy.handle :
-                 activeAgent.name === "Core Navigator" ? agentsConfig.coreNav.handle :
-                 activeAgent.name === "Compliance Review Director" ? agentsConfig.complianceDir.handle :
-                 agentsConfig.hrAdvisory.handle
-        }
-      });
+    if (!managerClient.isConfigured) {
+      return res.json({ success: false, error: "No BAND_PERSONAL_API_KEY configured." });
+    }
+    const result = await managerClient.testConnection();
+    if (result.success) {
+      res.json({ success: true, agent: { name: "Triage Sentinel", handle: agentsConfig.triage.handle } });
     } else {
-      res.json({
-        success: false,
-        error: "All configured Band.ai secrets rejected authentication. Please double check credentials."
-      });
+      res.json({ success: false, error: result.error || "Authentication failed." });
     }
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || "Failed to execute connection test" });
   }
+});
+
+// Provision all missing agents on Band.ai using the personal API key
+// POST /api/admin/provision-agents  body: { webhookBaseUrl: "https://your-host" }
+app.post("/api/admin/provision-agents", async (req, res) => {
+  const personalKey = process.env.BAND_PERSONAL_API_KEY;
+  if (!personalKey) {
+    return res.status(400).json({ error: "BAND_PERSONAL_API_KEY is not configured in .env" });
+  }
+
+  const webhookBase: string = (req.body?.webhookBaseUrl || "").replace(/\/$/, "");
+  const results: Record<string, any> = {};
+
+  // Only provision agents that don't have credentials yet
+  const virtualKeys = ["risk", "policy", "coreNav", "complianceDir", "hrAdvisory"] as const;
+
+  for (const key of virtualKeys) {
+    const cfg = agentsConfig[key];
+
+    if (cfg.apiKey && cfg.id) {
+      // Already exists — update its webhook URL if a base URL was provided
+      if (webhookBase && cfg.handle) {
+        const webhookUrl = `${webhookBase}${cfg.webhookPath}`;
+        const updated = await managerClient.updateWebhook(cfg.handle, webhookUrl, personalKey);
+        results[key] = { status: "webhook_updated", id: cfg.id, handle: cfg.handle, webhookUrl, updated };
+      } else {
+        results[key] = { status: "already_provisioned", id: cfg.id, handle: cfg.handle };
+      }
+      continue;
+    }
+
+    // Derive a clean handle slug from the key
+    const handleSlug = {
+      risk: "risk-analytics-engine",
+      policy: "policy-guard",
+      coreNav: "core-navigator",
+      complianceDir: "compliance-review-director",
+      hrAdvisory: "hr-advisory",
+    }[key];
+
+    const webhookUrl = webhookBase ? `${webhookBase}${cfg.webhookPath}` : undefined;
+
+    const created = await managerClient.createAgent(
+      { name: cfg.displayName, handle: handleSlug, description: cfg.description, webhookUrl },
+      personalKey
+    );
+
+    if (!created) {
+      results[key] = { status: "failed", error: "Band.ai API returned null — check personal key permissions" };
+      continue;
+    }
+
+    // Update in-memory registry
+    agentsConfig[key].id = created.id;
+    agentsConfig[key].apiKey = created.apiKey;
+    agentsConfig[key].handle = created.handle;
+    // Swap to the agent's own client
+    agentClients[key] = new BandClient(created.apiKey);
+
+    // Persist to .env so credentials survive restarts
+    try {
+      const fs = await import("fs");
+      const envPath = (await import("path")).join(process.cwd(), ".env");
+      let envContent = fs.readFileSync(envPath, "utf-8");
+
+      const envKeyMap: Record<string, [string, string, string]> = {
+        risk:         ["BAND_RISK_AGENT_ID",          "BAND_RISK_API_KEY",          "BAND_RISK_HANDLE"],
+        policy:       ["BAND_POLICY_AGENT_ID",         "BAND_POLICY_API_KEY",        "BAND_POLICY_HANDLE"],
+        coreNav:      ["BAND_CORE_NAV_AGENT_ID",       "BAND_CORE_NAV_API_KEY",      "BAND_CORE_NAV_HANDLE"],
+        complianceDir:["BAND_COMPLIANCE_DIR_AGENT_ID", "BAND_COMPLIANCE_DIR_API_KEY","BAND_COMPLIANCE_DIR_HANDLE"],
+        hrAdvisory:   ["BAND_HR_ADVISORY_AGENT_ID",    "BAND_HR_ADVISORY_API_KEY",   "BAND_HR_ADVISORY_HANDLE"],
+      };
+
+      const [idKey, apiKey, handleKey] = envKeyMap[key];
+      for (const [envKey, envVal] of [[idKey, created.id], [apiKey, created.apiKey], [handleKey, created.handle]] as [string, string][]) {
+        const regex = new RegExp(`^${envKey}=.*$`, "m");
+        if (regex.test(envContent)) {
+          envContent = envContent.replace(regex, `${envKey}=${envVal}`);
+        } else {
+          envContent += `\n${envKey}=${envVal}`;
+        }
+      }
+      fs.writeFileSync(envPath, envContent, "utf-8");
+    } catch (e: any) {
+      console.warn(`[Provision] Could not write credentials to .env for ${key}:`, e.message);
+    }
+
+    results[key] = { status: "created", id: created.id, handle: created.handle, webhookUrl };
+  }
+
+  res.json({ results, allProvisioned: Object.values(results).every((r: any) => r.status !== "failed") });
+});
+
+// Get agent provisioning status
+app.get("/api/admin/agents-status", (_req, res) => {
+  const status: Record<string, any> = {};
+  for (const [key, cfg] of Object.entries(agentsConfig)) {
+    status[key] = {
+      displayName: cfg.displayName,
+      avatar: cfg.avatar,
+      description: cfg.description,
+      provisioned: !!cfg.id && !!cfg.apiKey,
+      handle: cfg.handle || null,
+      id: cfg.id || null,
+      webhookPath: cfg.webhookPath,
+    };
+  }
+  res.json({ agents: status });
+});
+
+// Verify and save an individual agent's API key
+// POST /api/admin/agent-key  body: { agentKey: "risk", apiKey: "band_a_...", handle: "@workspace/slug", agentId: "uuid" }
+app.post("/api/admin/agent-key", async (req, res) => {
+  const { agentKey, apiKey, handle, agentId } = req.body;
+  if (!agentKey || !apiKey) {
+    return res.status(400).json({ error: "agentKey and apiKey are required" });
+  }
+  if (!agentsConfig[agentKey]) {
+    return res.status(404).json({ error: `Unknown agent key: ${agentKey}` });
+  }
+
+  // Test the key against Band.ai
+  const testClient = new BandClient(apiKey);
+  const result = await testClient.testConnection();
+  if (!result.success) {
+    return res.status(400).json({ error: `API key validation failed: ${result.error}` });
+  }
+
+  // Update in-memory registry
+  agentsConfig[agentKey].apiKey = apiKey;
+  agentClients[agentKey] = testClient;
+  if (handle) agentsConfig[agentKey].handle = handle;
+  if (agentId) agentsConfig[agentKey].id = agentId;
+  if (result.agent?.id) agentsConfig[agentKey].id = result.agent.id;
+  if (result.agent?.handle) agentsConfig[agentKey].handle = result.agent.handle;
+
+  // Persist to .env
+  try {
+    const fs = await import("fs");
+    const pathMod = await import("path");
+    const envPath = pathMod.join(process.cwd(), ".env");
+    let envContent = fs.readFileSync(envPath, "utf-8");
+
+    const envKeyMap: Record<string, [string, string, string]> = {
+      triage:       ["BAND_AGENT_ID",            "BAND_API_KEY",              "BAND_AGENT_HANDLE"],
+      risk:         ["BAND_RISK_AGENT_ID",        "BAND_RISK_API_KEY",        "BAND_RISK_HANDLE"],
+      policy:       ["BAND_POLICY_AGENT_ID",      "BAND_POLICY_API_KEY",      "BAND_POLICY_HANDLE"],
+      coreNav:      ["BAND_CORE_NAV_AGENT_ID",    "BAND_CORE_NAV_API_KEY",    "BAND_CORE_NAV_HANDLE"],
+      complianceDir:["BAND_COMPLIANCE_DIR_AGENT_ID","BAND_COMPLIANCE_DIR_API_KEY","BAND_COMPLIANCE_DIR_HANDLE"],
+      hrAdvisory:   ["BAND_HR_ADVISORY_AGENT_ID", "BAND_HR_ADVISORY_API_KEY", "BAND_HR_ADVISORY_HANDLE"],
+    };
+
+    const [idKey, apiKeyEnv, handleKey] = envKeyMap[agentKey];
+    const pairs: [string, string][] = [
+      [apiKeyEnv, apiKey],
+      ...(agentsConfig[agentKey].handle ? [[handleKey, agentsConfig[agentKey].handle]] as [string, string][] : []),
+      ...(agentsConfig[agentKey].id ? [[idKey, agentsConfig[agentKey].id]] as [string, string][] : []),
+    ];
+    for (const [envKey, envVal] of pairs) {
+      const regex = new RegExp(`^${envKey}=.*$`, "m");
+      envContent = regex.test(envContent)
+        ? envContent.replace(regex, `${envKey}=${envVal}`)
+        : envContent + `\n${envKey}=${envVal}`;
+    }
+    fs.writeFileSync(envPath, envContent, "utf-8");
+  } catch (e: any) {
+    console.warn(`[agent-key] Could not write to .env:`, e.message);
+  }
+
+  res.json({
+    success: true,
+    agent: {
+      key: agentKey,
+      id: agentsConfig[agentKey].id,
+      handle: agentsConfig[agentKey].handle,
+      displayName: agentsConfig[agentKey].displayName,
+      bandAgent: result.agent,
+    }
+  });
 });
 
 // 2. Get Single Case Details & Messages
@@ -502,15 +673,15 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
   let finalBandRoomId = `${caseId}-psychosocial-risk-review`;
   let hasRealBandRoom = false;
 
-  const activeCreator = getRoomCreatorClient();
-  if (activeCreator.isConfigured) {
+  if (managerClient.isConfigured) {
     try {
       const roomTitle = `CareGuard Case #${caseId}: ${title.substring(0, 80)}`;
-      const realRoom = await activeCreator.createChatRoom(roomTitle);
+      const realRoom = await managerClient.createChatRoom(roomTitle);
       if (realRoom && realRoom.id) {
         finalBandRoomId = realRoom.id;
         hasRealBandRoom = true;
         console.log(`[BandClient] Real chat room created on Band.ai: ${finalBandRoomId}`);
+        await addAllAgentsToRoom(finalBandRoomId);
       }
     } catch (err) {
       console.error("Failed to dynamically establish real Band.ai room:", err);
@@ -542,7 +713,7 @@ Return ONLY the fully sanitized version. Clean, readable, with same paragraphs, 
 
   if (hasRealBandRoom) {
     try {
-      await activeCreator.sendChatEvent(
+      await managerClient.sendChatEvent(
         finalBandRoomId,
         `🛡️ Case Intake Sync Complete: Case #${caseId} has been successfully opened in CareGuard compliance workspace. Redaction and privacy filters are active.`,
         "task"
@@ -581,43 +752,15 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
   caseItem.status = "reviewing_agents";
   caseItem.updatedAt = new Date().toISOString();
 
-  // Try to upgrade local/fallback room to online Band.ai room if key is now configured
-  const activeCreator = getRoomCreatorClient();
-  if (activeCreator.isConfigured && caseItem.bandRoomId.startsWith("case-")) {
+  // Try to upgrade local/fallback room to a real Band.ai room if the key is configured
+  if (managerClient.isConfigured && caseItem.bandRoomId.startsWith("case-")) {
     try {
       const roomTitle = `CareGuard Case #${caseId}: ${caseItem.title.substring(0, 80)}`;
-      const realRoom = await activeCreator.createChatRoom(roomTitle);
+      const realRoom = await managerClient.createChatRoom(roomTitle);
       if (realRoom && realRoom.id) {
         caseItem.bandRoomId = realRoom.id;
         console.log(`[BandClient] Upgraded case to real Band.ai room: ${caseItem.bandRoomId}`);
-
-        // Recruit all specialists into the Band.ai chat room to orchestrate deliberation
-        // Internal agents: recruit by handle (Band API requires handle for internal agents)
-        if (agentsConfig.risk.handle) {
-          await activeCreator.addParticipant(realRoom.id, agentsConfig.risk.id, agentsConfig.risk.handle.replace("@", "")).catch(err => {
-            console.warn(`Could not add risk agent participant:`, err.message || err);
-          });
-        }
-        if (agentsConfig.policy.handle) {
-          await activeCreator.addParticipant(realRoom.id, agentsConfig.policy.id, agentsConfig.policy.handle.replace("@", "")).catch(err => {
-            console.warn(`Could not add policy agent participant:`, err.message || err);
-          });
-        }
-        if (agentsConfig.coreNav.handle) {
-          await activeCreator.addParticipant(realRoom.id, agentsConfig.coreNav.id, agentsConfig.coreNav.handle.replace("@", "")).catch(err => {
-            console.warn(`Could not add coreNav agent participant:`, err.message || err);
-          });
-        }
-        if (agentsConfig.complianceDir.handle) {
-          await activeCreator.addParticipant(realRoom.id, agentsConfig.complianceDir.id, agentsConfig.complianceDir.handle.replace("@", "")).catch(err => {
-            console.warn(`Could not add compliance director participant:`, err.message || err);
-          });
-        }
-        if (agentsConfig.hrAdvisory.handle) {
-          await activeCreator.addParticipant(realRoom.id, agentsConfig.hrAdvisory.id, agentsConfig.hrAdvisory.handle.replace("@", "")).catch(err => {
-            console.warn(`Could not add HR advisory participant:`, err.message || err);
-          });
-        }
+        await addAllAgentsToRoom(caseItem.bandRoomId);
       }
     } catch (err) {
       console.warn("Could not upgrade room to real Band.ai room:", err);
@@ -630,15 +773,15 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
 
   // Local helper to append message & simulate timeline
   const addMsg = (agent: AgentRole, agentName: string, content: string, type: any, struct?: any, avatar?: string) => {
-    // Build list of other agents to resolve mentions dynamically
+    // Build list of resolvable agents — only include agents that have a real handle (i.e. provisioned)
     const peerMentions = [
-      { id: agentsConfig.triage.id, handle: agentsConfig.triage.handle, name: "Triage Sentinel", template: "@triage_agent" },
-      { id: agentsConfig.risk.id, handle: agentsConfig.risk.handle, name: "Risk Analytics Engine", template: "@risk_agent" },
-      { id: agentsConfig.policy.id, handle: agentsConfig.policy.handle, name: "Policy Guard", template: "@policy_compliance_agent" },
-      { id: agentsConfig.coreNav.id, handle: agentsConfig.coreNav.handle, name: "Care Navigator", template: "@care_pathway_agent" },
-      { id: agentsConfig.complianceDir.id, handle: agentsConfig.complianceDir.handle, name: "Compliance Review Director", template: "@review_decision_agent" },
-      { id: agentsConfig.hrAdvisory.id, handle: agentsConfig.hrAdvisory.handle, name: "HR Advisory", template: "@hr_advisory" }
-    ];
+      { id: agentsConfig.triage.id, handle: agentsConfig.triage.handle, name: agentsConfig.triage.displayName, template: "@triage_agent" },
+      { id: agentsConfig.risk.id, handle: agentsConfig.risk.handle, name: agentsConfig.risk.displayName, template: "@risk_agent" },
+      { id: agentsConfig.policy.id, handle: agentsConfig.policy.handle, name: agentsConfig.policy.displayName, template: "@policy_compliance_agent" },
+      { id: agentsConfig.coreNav.id, handle: agentsConfig.coreNav.handle, name: agentsConfig.coreNav.displayName, template: "@care_pathway_agent" },
+      { id: agentsConfig.complianceDir.id, handle: agentsConfig.complianceDir.handle, name: agentsConfig.complianceDir.displayName, template: "@review_decision_agent" },
+      { id: agentsConfig.hrAdvisory.id, handle: agentsConfig.hrAdvisory.handle, name: agentsConfig.hrAdvisory.displayName, template: "@hr_advisory" },
+    ].filter(p => !!p.handle);
 
     let formattedContent = content;
     const mentionsToSend: { id: string; handle: string; name: string }[] = [];
@@ -677,54 +820,40 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
     };
     messages[caseId].push(newMsg);
 
-    // Dynamic resolution of client to post on behalf of the registered agent identity
-    let targetClient = bandClient;
-    if (agent === "risk_agent" && riskClient.isConfigured) {
-      targetClient = riskClient;
-    } else if (agent === "policy_compliance_agent" && policyClient.isConfigured) {
-      targetClient = policyClient;
-    } else if (agent === "care_pathway_agent" && coreNavClient.isConfigured) {
-      targetClient = coreNavClient;
-    } else if (agent === "review_decision_agent" && complianceDirClient.isConfigured) {
-      targetClient = complianceDirClient;
-    } else if (agent === "hr_advisory" && hrAdvisoryClient.isConfigured) {
-      targetClient = hrAdvisoryClient;
-    } else if (!targetClient.isConfigured) {
-      targetClient = activeCreator;
-    }
+    // Post to Band.ai using the agent's own client if provisioned, else fall back to Triage Sentinel
+    const agentKeyMap: Record<AgentRole, string> = {
+      triage_agent: "triage", risk_agent: "risk", policy_compliance_agent: "policy",
+      care_pathway_agent: "coreNav", review_decision_agent: "complianceDir",
+      hr_advisory: "hrAdvisory", system: "triage", human_reviewer: "triage",
+    };
+    const clientKey = agentKeyMap[agent] || "triage";
+    const targetClient = agentClients[clientKey]?.isConfigured ? agentClients[clientKey] : managerClient;
 
-    // Sync to real Band.ai platform in real-time if active
     if (targetClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
-      let bType: "thought" | "tool_call" | "tool_result" | "error" | "task" = "task";
-      if (type === "agent_report") {
-        bType = "thought";
-      } else if (type === "challenge_issued" || type === "agent_reply") {
-        bType = "thought";
-      } else if (type === "final_memo") {
-        bType = "task";
-      }
+      const bType: "thought" | "task" = (type === "final_memo") ? "task" : "thought";
+      // Prefix with agent attribution when falling back to the triage identity so Band.ai shows who spoke
+      const needsPrefix = !agentClients[clientKey]?.isConfigured && agent !== "triage_agent" && agent !== "system";
+      const bandContent = needsPrefix ? `${avatar ?? ""} **${agentName}**\n${formattedContent}`.trim() : formattedContent;
 
-      // 1. Post Event (thought, tool_call, error, task etc.)
-      targetClient.sendChatEvent(caseItem.bandRoomId, formattedContent, bType, struct)
-        .catch(err => console.error(`Failed to push event as ${agentName} to Band.ai room ${caseItem.bandRoomId}:`, err));
+      targetClient.sendChatEvent(caseItem.bandRoomId, bandContent, bType, struct)
+        .catch(err => console.error(`Failed to push event [${agentName}] to Band.ai:`, err));
 
-      // 2. Post real Text Message to synchronize live deliberation through Band
       if (agent !== "system") {
-        targetClient.sendTextMessage(caseItem.bandRoomId, formattedContent, mentionsToSend)
-          .catch(err => console.error(`Failed to send deliberation message as ${agentName} to Band.ai room ${caseItem.bandRoomId}:`, err));
+        targetClient.sendTextMessage(caseItem.bandRoomId, bandContent, mentionsToSend)
+          .catch(err => console.error(`Failed to send message [${agentName}] to Band.ai:`, err));
       }
     }
 
     return newMsg;
   };
 
-  // Priority 1: Use real LLM API keys (Featherless / AI·ML) for case-specific AI analysis
+  // Priority 1: Use real LLM API keys (AI/ML API) for case-specific AI analysis
   // Priority 2: Use Gemini if available
   // Priority 3: Fall back to hardcoded simulation only if no API keys exist
-  const hasCustomLLMKeys = !!(process.env.FEATHERLESS_API_KEY || process.env.AIML_API_KEY);
+  const hasCustomLLMKeys = !!process.env.AIML_API_KEY;
 
   if (!hasCustomLLMKeys && !ai) {
-    console.log("No API keys available (Gemini, Featherless, or AIML). Using hardcoded simulation fallback.");
+    console.log("No API keys available (Gemini or AIML). Using hardcoded simulation fallback.");
     // Hardcoded Simulation Fallback (generic, not case-specific)
     try {
       // 1. Triage Agent
@@ -807,7 +936,7 @@ app.post("/api/cases/:id/trigger-review", async (req, res) => {
     }
   }
 
-  // Custom LLM API keys (Featherless or AI/ML API) — real case-specific AI analysis
+  // Custom LLM API keys (AI/ML API) — real case-specific AI analysis
   if (hasCustomLLMKeys) {
     try {
       const docDataString = `Case Details:
@@ -822,20 +951,14 @@ Redacted Report Description:
 ${caseItem.redactedDescription}
 """`;
 
-      // 1. Triage Agent Call (Qwen on Featherless)
-      let triageTextRaw = "";
-      try {
-        triageTextRaw = await runOpenAICompatibleCompletion({
-          provider: "featherless",
-          model: "Qwen/Qwen2.5-72B-Instruct",
-          systemPrompt: "You are the Triage Agent (named Triage Sentinel) for CareGuard. Analyzing a high-stakes workplace psychosocial case. Return raw JSON matching the required schema.",
-          userPrompt: `Analyze this report. Write a professional triage entry. Identify:
+      // 1. Triage Agent Call (Qwen on AI/ML API)
+      const triagePrompt = `Analyze this report. Write a professional triage entry. Identify:
 1. Main issue classification
 2. An initial urgency rating (low, moderate, high, or critical)
 3. Under-documented details (what information is missing?)
 4. A handoff callout notifying fellow agents (@risk_agent, @policy_compliance_agent, @care_pathway_agent).
 
-Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON:
+Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON, and do not return the example values verbatim — base every field on the actual case details below:
 {
   "readMarkdown": "Markdown summary of your report to post to the room. Use bullet points.",
   "category": "String case type classification",
@@ -844,23 +967,20 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
   "handoffTargets": ["risk_agent", "policy_compliance_agent"]
 }
 
-${docDataString}`
+${docDataString}`;
+      let triageTextRaw = "";
+      try {
+        triageTextRaw = await runOpenAICompatibleCompletion({
+          model: "Qwen/Qwen2.5-7B-Instruct-Turbo",
+          systemPrompt: "You are the Triage Agent (named Triage Sentinel) for CareGuard. Analyzing a high-stakes workplace psychosocial case. Return raw JSON matching the required schema.",
+          userPrompt: triagePrompt
         });
       } catch (e) {
-        console.warn("Triage calculation failed via Featherless, trying AIML / fallback:", e);
+        console.warn("Triage Sentinel failed on Qwen, falling back to gpt-4o-mini:", e);
         triageTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
-          model: "Qwen/Qwen2.5-72B-Instruct",
-          systemPrompt: "You are the Triage Agent (named Triage Sentinel). Return raw JSON matching the required schema.",
-          userPrompt: `Analyze this report. Respond with raw JSON format only:
-{
-  "readMarkdown": "Summary...",
-  "category": "Psychosocial Risk",
-  "urgency": "moderate",
-  "missingDetails": [],
-  "handoffTargets": ["risk_agent"]
-}
-${docDataString}`
+          model: "gpt-4o-mini",
+          systemPrompt: "You are the Triage Agent (named Triage Sentinel) for CareGuard. Analyzing a high-stakes workplace psychosocial case. Return raw JSON matching the required schema.",
+          userPrompt: triagePrompt
         });
       }
 
@@ -874,7 +994,7 @@ ${docDataString}`
 
       try {
         const cleanedText = triageTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        triageResult = JSON.parse(cleanedText);
+        triageResult = { ...triageResult, ...JSON.parse(cleanedText) };
       } catch (e) {
         console.warn("Failed to parse Qwen JSON:", e);
         triageResult.readMarkdown = triageTextRaw || triageResult.readMarkdown;
@@ -883,37 +1003,30 @@ ${docDataString}`
       addMsg("triage_agent", process.env.BAND_AGENT_HANDLE ? `Triage Sentinel (${process.env.BAND_AGENT_HANDLE})` : "Triage Sentinel", triageResult.readMarkdown, "agent_report", triageResult, "🎯");
 
       // 2. Risk Agent Call (Llama on AI/ML API)
-      let riskTextRaw = "";
-      try {
-        riskTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
-          model: "meta-llama/Llama-3-70b-instruct",
-          systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. You analyze workplace legal, safety, physiological, psychosocial, and corporate liabilities. Perform a psychosocial risk study. Return JSON matching the schema.",
-          userPrompt: `Psychosocial risk analysis based on:
+      const riskPrompt = `Psychosocial risk analysis based on:
 Triage: ${JSON.stringify(triageResult)}
 
 ${docDataString}
 
-Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON:
+Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON, and do not return the example values verbatim — base every field on the actual case details above:
 {
   "readMarkdown": "High-contrast Markdown summary of risk vectors found and your professional justification.",
   "riskFlags": ["severe_distress", "retaliation_probability"],
   "recommendedRiskLevel": "low | moderate | high | critical"
-}`
+}`;
+      let riskTextRaw = "";
+      try {
+        riskTextRaw = await runOpenAICompatibleCompletion({
+          model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+          systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. You analyze workplace legal, safety, physiological, psychosocial, and corporate liabilities. Perform a psychosocial risk study. Return JSON matching the schema.",
+          userPrompt: riskPrompt
         });
       } catch (e) {
         console.warn("Risk Analytics Engine failed via Llama, falling back to GPT-4o-mini:", e);
         riskTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
-          systemPrompt: "You are the Risk Agent.",
-          userPrompt: `Analyze risk. JSON schema:
-{
-  "readMarkdown": "markdown summary",
-  "riskFlags": ["severe_distress"],
-  "recommendedRiskLevel": "high"
-}
-${docDataString}`
+          systemPrompt: "You are the Risk Agent (named Risk Analytics Engine) for CareGuard. You analyze workplace legal, safety, physiological, psychosocial, and corporate liabilities. Perform a psychosocial risk study. Return JSON matching the schema.",
+          userPrompt: riskPrompt
         });
       }
 
@@ -925,7 +1038,7 @@ ${docDataString}`
 
       try {
         const cleaned = riskTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        riskResult = JSON.parse(cleaned);
+        riskResult = { ...riskResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse Risk Agent JSON:", e);
         riskResult.readMarkdown = riskTextRaw || riskResult.readMarkdown;
@@ -933,52 +1046,32 @@ ${docDataString}`
 
       addMsg("risk_agent", "Risk Analytics Engine", riskResult.readMarkdown, "agent_report", riskResult, "⚠️");
 
-      // 3. Policy Agent Call (DeepSeek on Featherless)
-      let policyTextRaw = "";
-      try {
-        policyTextRaw = await runOpenAICompatibleCompletion({
-          provider: "featherless",
-          model: "deepseek-ai/DeepSeek-V3",
-          systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. You map workplace cases to legal directives, employer Duty of Care laws, EAP boundaries, and strict consent protections. Return JSON.",
-          userPrompt: `Evaluate compliance constraints based on:
+      // 3. Policy Agent Call (DeepSeek on AI/ML API)
+      const policyPrompt = `Evaluate compliance constraints based on:
 Triage: ${JSON.stringify(triageResult)}
 Risk: ${JSON.stringify(riskResult)}
 
 ${docDataString}
 
-Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON:
+Respond with a raw JSON object matching this schema. Do not output anything other than raw JSON, and do not return the example values verbatim — base every field on the actual case details above:
 {
   "readMarkdown": "Policy and compliance checklist in Markdown. Highlight specific legal risks and documentation requirements.",
   "complianceRisk": "low | moderate | high | critical"
-}`
+}`;
+      let policyTextRaw = "";
+      try {
+        policyTextRaw = await runOpenAICompatibleCompletion({
+          model: "deepseek/deepseek-chat-v3.1",
+          systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. You map workplace cases to legal directives, employer Duty of Care laws, EAP boundaries, and strict consent protections. Return JSON.",
+          userPrompt: policyPrompt
         });
       } catch (e) {
-        console.warn("Policy Guard failed on DeepSeek, falling back to AI/ML API:", e);
-        try {
-          policyTextRaw = await runOpenAICompatibleCompletion({
-            provider: "aiml",
-            model: "deepseek-ai/DeepSeek-V3",
-            systemPrompt: "You are the Policy Guard.",
-            userPrompt: `Evaluate policy. JSON schema:
-{
-  "readMarkdown": "Checklist...",
-  "complianceRisk": "high"
-}
-${docDataString}`
-          });
-        } catch (e2) {
-          policyTextRaw = await runOpenAICompatibleCompletion({
-            provider: "aiml",
-            model: "gpt-4o-mini",
-            systemPrompt: "You are the Policy Guard.",
-            userPrompt: `Evaluate compliance. Respond strictly in JSON:
-{
-  "readMarkdown": "Policy overview",
-  "complianceRisk": "high"
-}
-${docDataString}`
-          });
-        }
+        console.warn("Policy Guard failed on DeepSeek, falling back to gpt-4o-mini:", e);
+        policyTextRaw = await runOpenAICompatibleCompletion({
+          model: "gpt-4o-mini",
+          systemPrompt: "You are the Policy & Compliance Agent (named Policy Guard) for CareGuard. You map workplace cases to legal directives, employer Duty of Care laws, EAP boundaries, and strict consent protections. Return JSON.",
+          userPrompt: policyPrompt
+        });
       }
 
       let policyResult = {
@@ -988,7 +1081,7 @@ ${docDataString}`
 
       try {
         const cleaned = policyTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        policyResult = JSON.parse(cleaned);
+        policyResult = { ...policyResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse Policy Agent JSON:", e);
         policyResult.readMarkdown = policyTextRaw || policyResult.readMarkdown;
@@ -1000,7 +1093,6 @@ ${docDataString}`
       let careTextRaw = "";
       try {
         careTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
           timeoutMs: 28000,
           systemPrompt: "You are the Care Pathway Agent (named Core Navigator) for CareGuard. Draft actionable wellness adjustments: EAP referrals, supervisor decoupling, wellness leaves. Be concise.",
@@ -1033,7 +1125,7 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
 
       try {
         const cleaned = careTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        careResult = JSON.parse(cleaned);
+        careResult = { ...careResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse Care Agent JSON:", e);
         careResult.readMarkdown = careTextRaw || careResult.readMarkdown;
@@ -1045,7 +1137,6 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
       let reviewTextRaw = "";
       try {
         reviewTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
           timeoutMs: 28000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Challenge peer recommendations with hard questions. Be concise.",
@@ -1075,7 +1166,7 @@ Respond with a raw JSON object. Do not output anything other than raw JSON:
 
       try {
         const cleaned = reviewTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        reviewResult = JSON.parse(cleaned);
+        reviewResult = { ...reviewResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse Review Agent JSON:", e);
         reviewResult.challengePost = reviewTextRaw || reviewResult.challengePost;
@@ -1087,7 +1178,6 @@ Respond with a raw JSON object. Do not output anything other than raw JSON:
       let repliesTextRaw = "";
       try {
         repliesTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
           timeoutMs: 28000,
           systemPrompt: "You are the automated responder for CareGuard Peer Debate. Represent Risk Analytics Engine and Policy Guard. Be concise.",
@@ -1114,7 +1204,7 @@ Respond with raw JSON only:
 
       try {
         const cleaned = repliesTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        repliesResult = JSON.parse(cleaned);
+        repliesResult = { ...repliesResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse peer replies:", e);
       }
@@ -1126,7 +1216,6 @@ Respond with raw JSON only:
       let memoTextRaw = "";
       try {
         memoTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
           timeoutMs: 28000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Compile the FINAL human-review memo for HR directors. Be precise and actionable.",
@@ -1179,7 +1268,7 @@ Respond with raw JSON only:
 
       try {
         const cleaned = memoTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        memoResult = JSON.parse(cleaned);
+        memoResult = { ...memoResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse Final Memo JSON:", e);
       }
@@ -1208,7 +1297,6 @@ The room state variables have been refreshed. Sealed record routed for final sig
       let hrTextRaw = "";
       try {
         hrTextRaw = await runOpenAICompatibleCompletion({
-          provider: "aiml",
           model: "gpt-4o-mini",
           timeoutMs: 28000,
           systemPrompt: "You are the HR Advisory Agent for CareGuard. Propose a collaborative consultative step-by-step action plan based on the final compliance memo. Be precise, structured, and action-oriented.",
@@ -1233,7 +1321,7 @@ Respond with a raw JSON object matching this schema:
       };
       try {
         const cleaned = hrTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        hrResult = JSON.parse(cleaned);
+        hrResult = { ...hrResult, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse HR Advisory JSON:", e);
         hrResult.readMarkdown = hrTextRaw || hrResult.readMarkdown;
@@ -1297,7 +1385,7 @@ Respond with a raw JSON object matching this schema. Avoid surrounding markdown 
 
       try {
         const parsed = JSON.parse(triageAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        triageResult = parsed;
+        triageResult = { ...triageResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse Triage Agent JSON, using text parse:", e);
         triageResult.readMarkdown = triageAI.text || triageResult.readMarkdown;
@@ -1334,7 +1422,7 @@ Respond strictly in JSON matching this schema:
 
       try {
         const parsed = JSON.parse(riskAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        riskResult = parsed;
+        riskResult = { ...riskResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse Risk Agent JSON, using text parse:", e);
         riskResult.readMarkdown = riskAI.text || riskResult.readMarkdown;
@@ -1367,7 +1455,7 @@ Respond strictly in JSON matching this schema:
 
       try {
         const parsed = JSON.parse(policyAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        policyResult = parsed;
+        policyResult = { ...policyResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse Policy Agent JSON, using text parse:", e);
         policyResult.readMarkdown = policyAI.text || policyResult.readMarkdown;
@@ -1399,7 +1487,7 @@ Respond strictly in JSON:
 
       try {
         const parsed = JSON.parse(careAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        careResult = parsed;
+        careResult = { ...careResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse Care Agent JSON, using text parse:", e);
         careResult.readMarkdown = careAI.text || careResult.readMarkdown;
@@ -1429,7 +1517,7 @@ Respond strictly in JSON matching this schema:
 
       try {
         const parsed = JSON.parse(reviewAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        reviewResult = parsed;
+        reviewResult = { ...reviewResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse Review Agent JSON, using text parse:", e);
         reviewResult.challengePost = reviewAI.text || reviewResult.challengePost;
@@ -1459,7 +1547,7 @@ Respond strictly in JSON with this schema:
 
       try {
         const parsed = JSON.parse(repliesAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        repliesResult = parsed;
+        repliesResult = { ...repliesResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse peer replies JSON, using text parse:", e);
       }
@@ -1510,7 +1598,7 @@ Consolidate a bulletproof memo. Respond in raw JSON matching this schema:
 
       try {
         const parsed = JSON.parse(memoAI.text!.replace(/```json/g, "").replace(/```/g, "").trim());
-        memoResult = parsed;
+        memoResult = { ...memoResult, ...parsed };
       } catch (e) {
         console.warn("Failed to parse final memo JSON, using text parse:", e);
       }
@@ -1562,7 +1650,7 @@ Respond strictly in JSON matching this schema:
       };
       try {
         const cleaned = hrTextRaw2.replace(/```json/g, "").replace(/```/g, "").trim();
-        hrResult2 = JSON.parse(cleaned);
+        hrResult2 = { ...hrResult2, ...JSON.parse(cleaned) };
       } catch (e) {
         console.warn("Failed to parse HR Advisory JSON:", e);
         hrResult2.readMarkdown = hrTextRaw2 || hrResult2.readMarkdown;
@@ -1605,12 +1693,11 @@ app.post("/api/cases/:id/human-action", async (req, res) => {
 
   messages[caseId].push(humanMsg);
 
-  // Sync human decision to real Band.ai platform in real-time if active
-  const targetHumanClient = complianceDirClient.isConfigured ? complianceDirClient : getRoomCreatorClient();
-  if (targetHumanClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
+  // Sync human decision to Band.ai
+  if (managerClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
     const formattedFeedback = `[Human Reviewer] ${actionText} (Sign-off: ${signOffStatus ? 'APPROVED' : 'PENDING'})`;
-    targetHumanClient.sendChatEvent(caseItem.bandRoomId, formattedFeedback, "task")
-      .catch(err => console.error(`Failed to push human feedback to Band.ai room ${caseItem.bandRoomId}:`, err));
+    managerClient.sendChatEvent(caseItem.bandRoomId, formattedFeedback, "task")
+      .catch((err: any) => console.error(`Failed to push human feedback to Band.ai:`, err));
   }
 
   // Update Case based on Human feedback
@@ -1631,18 +1718,254 @@ app.post("/api/cases/:id/human-action", async (req, res) => {
     };
     messages[caseId].push(confirmMsg);
 
-    // Sync closing message to real Band.ai platform in real-time
-    const targetCloseClient = complianceDirClient.isConfigured ? complianceDirClient : getRoomCreatorClient();
-    if (targetCloseClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
-      const closingConfirmation = `[Compliance Review Director] 🔒 Case Room closed by Human signatory. All compliance paths, EAP vouchers, work decoupling parameters, and case logs have been permanently preserved.`;
-      targetCloseClient.sendChatEvent(caseItem.bandRoomId, closingConfirmation, "task")
-        .catch(err => console.error(`Failed to push case closure status to Band.ai room ${caseItem.bandRoomId}:`, err));
+    // Sync closing message to Band.ai
+    if (managerClient.isConfigured && !caseItem.bandRoomId.startsWith("case-")) {
+      const closingConfirmation = `⚖️ **Compliance Review Director**\n🔒 Case Room closed by Human signatory. All compliance paths, EAP vouchers, work decoupling parameters, and case logs have been permanently preserved.`;
+      managerClient.sendChatEvent(caseItem.bandRoomId, closingConfirmation, "task")
+        .catch((err: any) => console.error(`Failed to push case closure status to Band.ai:`, err));
     }
   }
 
   res.json({ caseItem, messages: messages[caseId] });
 });
 
+
+// ---------------------- Band.ai Webhook Infrastructure ----------------------
+//
+// Each agent registered in Band.ai should point its webhook URL to the
+// corresponding endpoint below, e.g.:
+//   Triage Sentinel    -> https://<your-host>/api/webhooks/triage
+//   Risk Analytics     -> https://<your-host>/api/webhooks/risk
+//   Policy Guard       -> https://<your-host>/api/webhooks/policy
+//   Core Navigator     -> https://<your-host>/api/webhooks/coreNav
+//   Compliance Director-> https://<your-host>/api/webhooks/complianceDir
+//   HR Advisory        -> https://<your-host>/api/webhooks/hrAdvisory
+//
+// When an agent is @mentioned in a Band room, Band.ai POSTs the message to
+// that agent's webhook. The handler fetches room history, runs the LLM, and
+// replies through Band.ai using the agent's own API key — completing the
+// internal-agent communication loop entirely inside Band.ai.
+
+type AgentWebhookDef = {
+  role: AgentRole;
+  displayName: string;
+  avatar: string;
+  ownHandle: string;
+  ownClient: BandClient;
+  systemPrompt: string;
+  nextMentionRoles: (keyof typeof agentsConfig)[];
+};
+
+// Static per-agent metadata — clients and handles are resolved dynamically at call time
+// so provisioning updates are picked up without restarting.
+const agentWebhookDefs: Record<string, Omit<AgentWebhookDef, "ownHandle" | "ownClient">> = {
+  triage: {
+    role: "triage_agent",
+    displayName: "Triage Sentinel",
+    avatar: "🎯",
+    systemPrompt:
+      "You are Triage Sentinel for CareGuard. Analyze the case and produce a concise triage entry: issue classification, urgency (low/moderate/high/critical), missing information, and handoff notes. Use Markdown. Mention @risk_agent and @policy_compliance_agent to hand off.",
+    nextMentionRoles: ["risk", "policy"],
+  },
+  risk: {
+    role: "risk_agent",
+    displayName: "Risk Analytics Engine",
+    avatar: "⚠️",
+    systemPrompt:
+      "You are Risk Analytics Engine for CareGuard. Analyze psychosocial, legal, and retaliation risk vectors. Produce a Markdown risk report with a recommended risk level. Mention @review_decision_agent when done.",
+    nextMentionRoles: ["complianceDir"],
+  },
+  policy: {
+    role: "policy_compliance_agent",
+    displayName: "Policy Guard",
+    avatar: "📜",
+    systemPrompt:
+      "You are Policy Guard for CareGuard. Map the case to Duty of Care laws, confidentiality rules, and EAP obligations. Produce a Markdown compliance checklist. Mention @review_decision_agent when done.",
+    nextMentionRoles: ["complianceDir"],
+  },
+  coreNav: {
+    role: "care_pathway_agent",
+    displayName: "Core Navigator",
+    avatar: "🌱",
+    systemPrompt:
+      "You are Core Navigator for CareGuard. Design EAP referrals, supervisor-decoupling steps, and wellness adjustments. Produce a Markdown care-pathway plan. Mention @review_decision_agent when done.",
+    nextMentionRoles: ["complianceDir"],
+  },
+  complianceDir: {
+    role: "review_decision_agent",
+    displayName: "Compliance Review Director",
+    avatar: "⚖️",
+    systemPrompt:
+      "You are Compliance Review Director for CareGuard. Challenge peer recommendations with hard questions, then compile the final human-review advisory memo: risk level, recommended next step, rationale, and reviewer checklist. Mention @hr_advisory to request the action plan.",
+    nextMentionRoles: ["hrAdvisory"],
+  },
+  hrAdvisory: {
+    role: "hr_advisory",
+    displayName: "HR Advisory",
+    avatar: "👔",
+    systemPrompt:
+      "You are HR Advisory for CareGuard. Based on the final compliance memo, produce a consultative step-by-step action plan with immediate (0-24h) and short-term (24-72h) actions and a RACI matrix summary.",
+    nextMentionRoles: [],
+  },
+};
+
+// Template-handle map used to replace @shorthand with real Band.ai handles in LLM output
+const MENTION_TEMPLATES: Record<string, keyof typeof agentsConfig> = {
+  "@triage_agent": "triage",
+  "@risk_agent": "risk",
+  "@policy_compliance_agent": "policy",
+  "@care_pathway_agent": "coreNav",
+  "@review_decision_agent": "complianceDir",
+  "@hr_advisory": "hrAdvisory",
+};
+
+async function handleBandWebhook(defKey: string, payload: any): Promise<string | null> {
+  const def = agentWebhookDefs[defKey];
+  // Resolve client and handle dynamically so provisioning updates take effect immediately
+  const ownClient = agentClients[defKey]?.isConfigured ? agentClients[defKey] : managerClient;
+  const ownHandle = agentsConfig[defKey]?.handle || agentsConfig.triage.handle;
+  if (!def) return null;
+
+  // Parse Band.ai webhook payload — handle multiple envelope formats
+  const chatId: string =
+    payload.chat_id ?? payload.data?.chat_id ?? payload.chat?.id ?? "";
+  const incomingContent: string =
+    payload.message?.content ?? payload.data?.message?.content ?? "";
+  const senderHandle: string =
+    payload.message?.sender?.handle ?? payload.data?.message?.sender?.handle ?? "";
+
+  if (!chatId || !incomingContent) return null;
+
+  // Anti-loop guard: skip messages sent by this same agent
+  const cleanOwn = ownHandle.replace(/^@/, "");
+  if (senderHandle && (senderHandle === cleanOwn || senderHandle.endsWith(`/${cleanOwn.split("/").pop()}`))) {
+    return null;
+  }
+
+  // Find the case associated with this Band room
+  const caseItem = cases.find(c => c.bandRoomId === chatId);
+  if (!caseItem) {
+    console.warn(`[Webhook/${defKey}] No case found for room ${chatId}`);
+    return null;
+  }
+
+  // Fetch recent room messages to give the agent full conversation context
+  const history = await ownClient.getMessages(chatId, 25);
+  const historyStr = history
+    .map((m: any) => `[${m.sender?.handle ?? m.sender_handle ?? "system"}]: ${m.content ?? ""}`)
+    .join("\n");
+
+  const caseContext = `Case Title: ${caseItem.title}
+Department: ${caseItem.department}
+Incident Date: ${caseItem.dateOfIncident}
+Immediate Safety Concern: ${caseItem.immediateSafetyConcern}
+Consent Given: ${caseItem.consentStatus}
+Prior Interventions: ${caseItem.priorInterventions}
+Redacted Description:
+"""
+${caseItem.redactedDescription}
+"""`;
+
+  // Run the agent's LLM using AIML API (with gpt-4o-mini fallback)
+  let responseText = "";
+  const userPrompt = `${caseContext}
+
+Recent room conversation:
+${historyStr || "(no prior messages)"}
+
+Incoming message that triggered you:
+${incomingContent}
+
+Respond now as ${def.displayName}.`;
+
+  try {
+    responseText = await runOpenAICompatibleCompletion({
+      model: "gpt-4o-mini",
+      timeoutMs: 30000,
+      systemPrompt: def.systemPrompt,
+      userPrompt,
+    });
+  } catch (err) {
+    console.error(`[Webhook/${defKey}] LLM call failed:`, err);
+    return null;
+  }
+
+  if (!responseText) return null;
+
+  // Resolve @shorthand mentions → real Band.ai handles and collect mention objects
+  let formattedContent = responseText;
+  const mentionsToSend: { id: string; handle: string; name: string }[] = [];
+
+  for (const [template, configKey] of Object.entries(MENTION_TEMPLATES)) {
+    if (formattedContent.includes(template)) {
+      const cfg = agentsConfig[configKey];
+      formattedContent = formattedContent.replace(new RegExp(template.replace("@", "\\@"), "g"), cfg.handle);
+      if (!mentionsToSend.find(m => m.id === cfg.id)) {
+        mentionsToSend.push({ id: cfg.id, handle: cfg.handle, name: agentWebhookDefs[configKey]?.displayName ?? configKey });
+      }
+    }
+  }
+
+  // Ensure mandatory next-step mentions are included
+  for (const nextKey of def.nextMentionRoles) {
+    const cfg = agentsConfig[nextKey];
+    if (cfg.handle && !mentionsToSend.find(m => m.id === cfg.id)) {
+      mentionsToSend.push({ id: cfg.id, handle: cfg.handle, name: agentWebhookDefs[nextKey]?.displayName ?? nextKey });
+    }
+  }
+
+  // Mirror into in-app message store so the UI stays in sync
+  messages[caseItem.id] = messages[caseItem.id] || [];
+  messages[caseItem.id].push({
+    id: `m-${caseItem.id}-wb-${Date.now()}`,
+    caseId: caseItem.id,
+    agent: def.role,
+    agentName: def.displayName,
+    agentAvatar: def.avatar,
+    content: formattedContent,
+    timestamp: new Date().toISOString(),
+    type: "agent_report",
+  } as BandMessage);
+
+  // If agent has its own API key, also post via REST for richer mention support
+  if (ownClient.isConfigured) {
+    ownClient.sendTextMessage(chatId, formattedContent, mentionsToSend)
+      .catch(err => console.warn(`[Webhook/${defKey}] REST post failed (ok to ignore for internal agents):`, err));
+  }
+
+  console.log(`[Webhook/${defKey}] Processed reply for room ${chatId}`);
+  // Return the content so webhook endpoints can reply inline (internal agent flow — no API key needed)
+  return formattedContent;
+}
+
+
+// Webhook endpoints — Band.ai calls these when the agent is @mentioned in a room.
+// For internal agents the response is returned inline in the HTTP body (no separate API key needed).
+// If the agent also has a REST API key, an additional sendTextMessage call is made for richer mention support.
+async function webhookHandler(defKey: string, req: any, res: any) {
+  res.setTimeout(35000);
+  try {
+    const content = await handleBandWebhook(defKey, req.body);
+    if (content) {
+      // Inline reply — Band.ai posts this as the agent's message in the room
+      res.status(200).json({ message: content, content, text: content });
+    } else {
+      res.status(200).json({ ok: true });
+    }
+  } catch (err) {
+    console.error(`[Webhook/${defKey}] Handler error:`, err);
+    res.status(200).json({ ok: true });
+  }
+}
+
+app.post("/api/webhooks/triage",       (req, res) => webhookHandler("triage",       req, res));
+app.post("/api/webhooks/risk",         (req, res) => webhookHandler("risk",         req, res));
+app.post("/api/webhooks/policy",       (req, res) => webhookHandler("policy",       req, res));
+app.post("/api/webhooks/coreNav",      (req, res) => webhookHandler("coreNav",      req, res));
+app.post("/api/webhooks/complianceDir",(req, res) => webhookHandler("complianceDir",req, res));
+app.post("/api/webhooks/hrAdvisory",   (req, res) => webhookHandler("hrAdvisory",   req, res));
+
+// ---------------------- End Webhook Infrastructure ----------------------
 
 // Serve the Vite App
 async function startServer() {

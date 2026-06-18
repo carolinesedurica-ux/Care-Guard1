@@ -1,26 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { 
-  ShieldAlert, 
-  CheckCircle, 
-  MessageSquare, 
-  AlertTriangle, 
-  Activity, 
-  FileText, 
-  ChevronRight, 
-  Plus, 
-  Search, 
-  Users, 
-  CheckSquare, 
-  Download, 
-  UserCheck, 
-  RefreshCw, 
-  Lock, 
-  Clock, 
-  Sparkles, 
+import {
+  ShieldAlert,
+  CheckCircle,
+  AlertTriangle,
+  Plus,
+  Search,
+  UserCheck,
+  RefreshCw,
+  Lock,
   X,
-  FileSpreadsheet
+  Zap,
+  Bot,
+  ExternalLink,
 } from "lucide-react";
-import { WorkplaceCase, BandMessage, AgentRole } from "./types";
+import { WorkplaceCase, BandMessage } from "./types";
 import RiskGauge from "./components/RiskGauge";
 import AgentStatusList from "./components/AgentStatusList";
 import IntakeForm from "./components/IntakeForm";
@@ -49,10 +42,19 @@ export default function App() {
   // Error and Notification State
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Agent Provisioning Panel State
+  const [showProvisionPanel, setShowProvisionPanel] = useState(false);
+  const [agentsStatus, setAgentsStatus] = useState<Record<string, { provisioned: boolean; displayName: string; avatar: string; description: string; handle: string; webhookPath: string }>>({});
+  const [isProvisioning, setIsProvisioning] = useState(false);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [agentKeyInputs, setAgentKeyInputs] = useState<Record<string, string>>({});
+  const [isVerifyingKey, setIsVerifyingKey] = useState<string | null>(null);
+
   // Fetch all cases on mount
   useEffect(() => {
     fetchCases();
     fetchConfig();
+    fetchAgentsStatus();
   }, []);
 
   // Fetch active Case messages when selected case changes
@@ -93,6 +95,65 @@ export default function App() {
       }
     } catch (err) {
       console.error("Failed to fetch custom band configuration:", err);
+    }
+  };
+
+  const fetchAgentsStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/agents-status");
+      if (res.ok) {
+        const data = await res.json();
+        setAgentsStatus(data.agents || {});
+      }
+    } catch (err) {
+      console.error("Failed to fetch agents status:", err);
+    }
+  };
+
+  const handleProvisionAgents = async () => {
+    setIsProvisioning(true);
+    try {
+      const res = await fetch("/api/admin/provision-agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookBaseUrl: window.location.origin }),
+      });
+      if (res.ok) {
+        await fetchAgentsStatus();
+        showNotification("success", "Webhook URLs updated for all provisioned agents.");
+      } else {
+        showNotification("error", "Failed to update webhook URLs. Check BAND_PERSONAL_API_KEY in .env.");
+      }
+    } catch (err) {
+      showNotification("error", "Error connecting to provisioning service.");
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
+
+  const handleConnectAgentKey = async (agentKey: string) => {
+    const apiKey = agentKeyInputs[agentKey]?.trim();
+    if (!apiKey) return;
+    setIsVerifyingKey(agentKey);
+    try {
+      const res = await fetch("/api/admin/agent-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentKey, apiKey }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showNotification("success", `${data.agent.displayName} connected: ${data.agent.handle || data.agent.bandAgent?.handle || "✓"}`);
+        setExpandedAgent(null);
+        setAgentKeyInputs(prev => { const n = { ...prev }; delete n[agentKey]; return n; });
+        await fetchAgentsStatus();
+      } else {
+        showNotification("error", data.error || "Key verification failed — check that this is a valid band_a_... key.");
+      }
+    } catch {
+      showNotification("error", "Error contacting server.");
+    } finally {
+      setIsVerifyingKey(null);
     }
   };
 
@@ -391,6 +452,15 @@ export default function App() {
               )}
             </div>
           ) : null}
+
+          <button
+            onClick={() => { setShowProvisionPanel(true); fetchAgentsStatus(); }}
+            className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-3xs hover:bg-slate-100 transition-all"
+            title="Setup Band.ai agents"
+          >
+            <Bot className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="text-[9px] font-bold font-mono text-slate-600 uppercase tracking-wider hidden sm:block">Setup Agents</span>
+          </button>
 
           <div className="w-8 h-8 rounded-full bg-slate-105 bg-slate-900 text-white flex items-center justify-center text-xs font-mono font-extrabold shadow-3xs cursor-default select-none border border-slate-800" title="Human Reviewer Context">
             HR
@@ -940,6 +1010,156 @@ export default function App() {
 
         </main>
       </div>
+
+      {/* Agent Provision Panel Drawer */}
+      <AnimatePresence>
+        {showProvisionPanel && (
+          <>
+            <motion.div
+              key="provision-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowProvisionPanel(false)}
+            />
+            <motion.div
+              key="provision-drawer"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 220 }}
+              className="fixed right-0 top-0 bottom-0 z-50 w-[420px] bg-white shadow-2xl border-l border-slate-200 flex flex-col"
+            >
+              {/* Drawer header */}
+              <div className="p-5 border-b border-slate-700 flex items-center justify-between bg-slate-900 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <Bot className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Band.ai Agent Setup</h2>
+                    <p className="text-[10px] text-slate-400 font-mono">Connect internal agents to CareGuard</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowProvisionPanel(false)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Step instructions */}
+              <div className="px-4 pt-4 pb-3 bg-indigo-50 border-b border-indigo-100 shrink-0 space-y-2">
+                <p className="text-[11px] font-bold text-indigo-800 uppercase tracking-wide">How to connect agents</p>
+                <ol className="text-[11px] text-indigo-700 leading-relaxed space-y-1 list-none">
+                  <li className="flex gap-2"><span className="font-bold text-indigo-500 shrink-0">1.</span>Go to <a href="https://app.band.ai/agents" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-indigo-900">app.band.ai/agents</a> and create each agent below</li>
+                  <li className="flex gap-2"><span className="font-bold text-indigo-500 shrink-0">2.</span>Copy the <code className="bg-indigo-100 px-1 rounded font-mono">band_a_...</code> API key for each agent</li>
+                  <li className="flex gap-2"><span className="font-bold text-indigo-500 shrink-0">3.</span>Expand the agent card below, paste the key, and click Connect</li>
+                </ol>
+              </div>
+
+              {/* Agent list */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-slate-50">
+                {Object.keys(agentsStatus).length === 0 ? (
+                  <div className="text-center py-10 text-xs text-slate-400">
+                    <Bot className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    Loading agent status...
+                  </div>
+                ) : (
+                  (Object.entries(agentsStatus) as Array<[string, typeof agentsStatus[string]]>).map(([key, agent]) => {
+                    const isExpanded = expandedAgent === key;
+                    const inputVal = agentKeyInputs[key] || "";
+                    const isVerifying = isVerifyingKey === key;
+                    return (
+                      <div key={key} className={`bg-white border rounded-xl shadow-xs overflow-hidden transition-all ${isExpanded ? "border-indigo-300" : "border-slate-200"}`}>
+                        {/* Agent row */}
+                        <button
+                          onClick={() => setExpandedAgent(isExpanded ? null : key)}
+                          className="w-full flex items-center justify-between p-3.5 text-left hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xl leading-none shrink-0">{agent.avatar}</span>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">{agent.displayName}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">
+                                {agent.handle || "No handle — not yet connected"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {agent.provisioned ? (
+                              <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                <CheckCircle className="w-3 h-3" /> Connected
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Needs Key
+                              </span>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded form */}
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 p-3.5 space-y-3 bg-slate-50/80">
+                            <div className="text-[10px] text-slate-500 leading-relaxed">
+                              <span className="font-semibold text-slate-700">Agent name to use on Band.ai:</span>{" "}
+                              <span className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded">{agent.displayName}</span>
+                            </div>
+                            {agent.description && (
+                              <p className="text-[10px] text-slate-500 italic leading-relaxed">{agent.description}</p>
+                            )}
+                            <div className="space-y-2">
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                                Paste API Key (band_a_...)
+                              </label>
+                              <input
+                                type="text"
+                                value={inputVal}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAgentKeyInputs((prev: Record<string, string>) => ({ ...prev, [key]: e.target.value }))}
+                                placeholder="band_a_1234_..."
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleConnectAgentKey(key)}
+                                disabled={!inputVal || isVerifying}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              >
+                                <Zap className={`w-3 h-3 ${isVerifying ? "animate-pulse" : ""}`} />
+                                {isVerifying ? "Verifying..." : "Verify & Connect"}
+                              </button>
+                              <a
+                                href="https://app.band.ai/agents"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold hover:bg-slate-50 transition-all"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Create
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Drawer footer */}
+              <div className="p-4 border-t border-slate-200 space-y-2 bg-white shrink-0">
+                <button
+                  onClick={handleProvisionAgents}
+                  disabled={isProvisioning}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold shadow transition-all disabled:opacity-50"
+                >
+                  <Zap className={`w-3.5 h-3.5 ${isProvisioning ? "animate-pulse" : ""}`} />
+                  {isProvisioning ? "Updating..." : "Sync Webhook URLs"}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Structured Footer */}
       <footer className="h-10 bg-[#0F172A] border-t border-slate-800 flex items-center justify-between px-6 shrink-0 text-[9px] text-slate-400 uppercase tracking-widest font-mono">

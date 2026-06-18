@@ -22,8 +22,8 @@ export class BandClient {
 
   constructor(customApiKey?: string) {
     this.apiKey = customApiKey || process.env.BAND_API_KEY || "";
-    // Note: THENVOI_REST_URL in env represents key, fallback to app.band.ai
-    this.baseUrl = (process.env.THENVOI_REST_URL || "https://app.band.ai/").trim();
+    // BAND_REST_URL is the official env var per docs.band.ai; THENVOI_REST_URL kept for backwards compat
+    this.baseUrl = (process.env.BAND_REST_URL || process.env.THENVOI_REST_URL || "https://app.band.ai/").trim();
     if (this.baseUrl.endsWith("/")) {
       this.baseUrl = this.baseUrl.slice(0, -1);
     }
@@ -62,8 +62,8 @@ export class BandClient {
       }
 
       const data = await res.json();
-      // Band response usually is nested under key or direct
-      const agent: BandAgentMe = data.agent || data;
+      // Band response is nested under "data" (e.g. { data: { id, name, handle, ... } })
+      const agent: BandAgentMe = data.data || data.agent || data;
       console.log(`[BandClient] Connected successfully as agent: ${agent.name} (${agent.handle})`);
       return { success: true, agent };
     } catch (err: any) {
@@ -109,7 +109,8 @@ export class BandClient {
 
   /**
    * Recruits / Adds a peer participant to the chat room: POST /api/v1/agent/chats/{chat_id}/participants
-   * For internal agents, use their handle. For remote agents, use their UUID.
+   * For internal agents (same workspace), Band API requires the handle field.
+   * For external agents, participant_id (UUID) is used.
    */
   public async addParticipant(chatId: string, agentId: string, agentHandle?: string): Promise<any> {
     if (!this.apiKey) return null;
@@ -118,15 +119,15 @@ export class BandClient {
       const url = `${this.baseUrl}/api/v1/agent/chats/${chatId}/participants`;
       console.log(`[BandClient] Adding participant ${agentHandle || agentId} to chat ${chatId}: POST ${url}`);
 
-      // Band API accepts handle for internal agents, id for remote agents
+      // Internal agents must be added by handle; external agents by participant_id
       const participantBody = agentHandle
-        ? { participant: { handle: agentHandle } }
-        : { participant: { id: agentId } };
+        ? { handle: agentHandle }
+        : { participant_id: agentId };
 
       const res = await fetch(url, {
         method: "POST",
         headers: this.getHeaders(),
-        body: JSON.stringify(participantBody)
+        body: JSON.stringify({ participant: participantBody })
       });
 
       if (!res.ok) {
@@ -181,6 +182,105 @@ export class BandClient {
     } catch (err) {
       console.error("[BandClient] Error sending message:", err);
       return null;
+    }
+  }
+
+  /**
+   * Creates a new agent on Band.ai using the account-level personal API key.
+   * The personal key (band_u_...) has workspace-admin scope and can create agents.
+   * Returns the new agent's id, handle, and its own api_key, or null on failure.
+   */
+  public async createAgent(
+    params: { name: string; handle: string; description: string; webhookUrl?: string },
+    personalApiKey: string
+  ): Promise<{ id: string; handle: string; apiKey: string; name: string } | null> {
+    if (!personalApiKey) return null;
+
+    try {
+      const url = `${this.baseUrl}/api/v1/agents`;
+      console.log(`[BandClient] Creating agent "${params.name}": POST ${url}`);
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${personalApiKey}`,
+          "X-API-Key": personalApiKey,
+        },
+        body: JSON.stringify({
+          agent: {
+            name: params.name,
+            handle: params.handle,
+            description: params.description,
+            webhook_url: params.webhookUrl || null,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`[BandClient] Failed to create agent "${params.name}": ${res.status} - ${errorText}`);
+        return null;
+      }
+
+      const data = await res.json();
+      const agent = data.agent || data.data || data;
+      const apiKey = agent.api_key || agent.apiKey || agent.token || "";
+      console.log(`[BandClient] Agent created: ${agent.name} (${agent.handle})`);
+      return { id: agent.id, handle: agent.handle, apiKey, name: agent.name };
+    } catch (err: any) {
+      console.error(`[BandClient] Error creating agent "${params.name}":`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Updates the webhook URL for an existing agent via PATCH /api/v1/agents/{handle}
+   */
+  public async updateWebhook(
+    agentHandle: string,
+    webhookUrl: string,
+    personalApiKey: string
+  ): Promise<boolean> {
+    if (!personalApiKey) return false;
+    try {
+      const cleanHandle = agentHandle.replace(/^@/, "");
+      const url = `${this.baseUrl}/api/v1/agents/${cleanHandle}`;
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${personalApiKey}`,
+          "X-API-Key": personalApiKey,
+        },
+        body: JSON.stringify({ agent: { webhook_url: webhookUrl } }),
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`[BandClient] Failed to update webhook for ${agentHandle}: ${res.status} - ${errorText}`);
+      }
+      return res.ok;
+    } catch (err: any) {
+      console.error(`[BandClient] Error updating webhook for ${agentHandle}:`, err);
+      return false;
+    }
+  }
+
+  /**
+   * Fetches recent messages from a chat room: GET /api/v1/agent/chats/{chat_id}/messages
+   * Used by webhook handlers to build conversation context before generating a reply.
+   */
+  public async getMessages(chatId: string, limit: number = 20): Promise<any[]> {
+    if (!this.apiKey) return [];
+    try {
+      const url = `${this.baseUrl}/api/v1/agent/chats/${chatId}/messages?limit=${limit}`;
+      const res = await fetch(url, { method: "GET", headers: this.getHeaders() });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.messages || data.data || [];
+    } catch (err) {
+      console.error("[BandClient] Error fetching messages:", err);
+      return [];
     }
   }
 
