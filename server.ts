@@ -1104,118 +1104,42 @@ Respond with a raw JSON object matching this schema. Do not output anything othe
       addMsg("policy_compliance_agent", "Policy Guard", policyResult.readMarkdown, "agent_report", policyResult, "📜");
       addMsg("care_pathway_agent", "Care Navigator", careResult.readMarkdown, "agent_report", careResult, "🌱");
 
-      // 5. Review Agent Debate/Challenge Compilation (gpt-4o-mini — fast)
-      let reviewTextRaw = "";
-      try {
-        reviewTextRaw = await runOpenAICompatibleCompletion({
+      // 5+6+7+8. Review challenge + Peer replies + Final memo + HR Advisory — ALL PARALLEL
+      // Steps 5-8 all need only triageResult+riskResult+policyResult+careResult as input,
+      // so they run concurrently. Display order is enforced when calling addMsg after.
+      const contextSummary = `Triage: ${JSON.stringify(triageResult)}\nRisk: ${JSON.stringify(riskResult)}\nPolicy: ${JSON.stringify(policyResult)}\nCare: ${JSON.stringify(careResult)}\n\n${docDataString}`;
+      const derivedRisk = riskResult.recommendedRiskLevel || triageResult.urgency || "moderate";
+
+      const [reviewTextRaw, repliesTextRaw, memoTextRaw, hrTextRaw] = await Promise.all([
+        // 5. Review challenge
+        runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
           timeoutMs: 10000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Challenge peer recommendations with hard questions. Be concise.",
-          userPrompt: `Challenge peer agents based on:
-Triage: ${JSON.stringify(triageResult)}
-Risk: ${JSON.stringify(riskResult)}
-Policy: ${JSON.stringify(policyResult)}
-Care: ${JSON.stringify(careResult)}
-
-${docDataString}
-
-Respond with a raw JSON object. Do not output anything other than raw JSON:
-{
-  "challengePost": "Markdown challenge review calling out @risk_agent and @policy_compliance_agent with hard questions."
-}`
-        });
-      } catch (e) {
-        console.warn("Compliance Review Director LLM call timed out, using built-in fallback:", e);
-        reviewTextRaw = JSON.stringify({
+          userPrompt: `Challenge peer agents based on:\n${contextSummary}\n\nRespond with a raw JSON object. Do not output anything other than raw JSON:\n{\n  "challengePost": "Markdown challenge review calling out @risk_agent and @policy_compliance_agent with hard questions."\n}`
+        }).catch(() => JSON.stringify({
           challengePost: `**⚖️ Challenge Phase — Compliance Review Director:**\n\n❓ Questions for peer agents before final memo sign-off:\n- @risk_agent: Does the current risk level account for escalation if the supervisor continues disciplinary proceedings while the employee is in active psychological distress?\n- @policy_compliance_agent: Can HR legally freeze the attendance review without the supervisor's formal acknowledgement under current policy?\n- @care_pathway_agent: Is the EAP referral sufficient without a formal wellness leave, given the severity of symptoms reported?`
-        });
-      }
-
-      let reviewResult = {
-        challengePost: "**Review Stage Debate:** We require peer calibration before signing off.\n- @risk_agent: Can this remain high risk?\n- @policy_compliance_agent: What is the backup option?"
-      };
-
-      try {
-        const cleaned = reviewTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        reviewResult = { ...reviewResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse Review Agent JSON:", e);
-        reviewResult.challengePost = reviewTextRaw || reviewResult.challengePost;
-      }
-
-      addMsg("review_decision_agent", "Compliance Review Director", reviewResult.challengePost, "challenge_issued", null, "⚖️");
-
-      // 6. Assemble Peer Responses (Debate Playback) (gpt-4o-mini — fast)
-      let repliesTextRaw = "";
-      try {
-        repliesTextRaw = await runOpenAICompatibleCompletion({
+        })),
+        // 6. Peer replies — synthesized from full context, not dependent on challenge text
+        runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
           timeoutMs: 10000,
-          systemPrompt: "You are the automated responder for CareGuard Peer Debate. Represent Risk Analytics Engine and Policy Guard. Be concise.",
-          userPrompt: `Answer this challenge: "${reviewResult.challengePost}"
-
-Respond with raw JSON only:
-{
-  "riskAgentReply": "Risk Analytics Engine reply mentioning @review_decision_agent.",
-  "policyAgentReply": "Policy Guard reply mentioning @review_decision_agent."
-}`
-        });
-      } catch (e) {
-        console.warn("Peer replies LLM call timed out, using built-in fallback:", e);
-        repliesTextRaw = JSON.stringify({
+          systemPrompt: "You are the automated responder for CareGuard Peer Debate. Represent Risk Analytics Engine and Policy Guard defending their positions. Be concise.",
+          userPrompt: `Based on this case context, write brief defensive responses from Risk Analytics Engine and Policy Guard that justify their assessments:\n${contextSummary}\n\nRespond with raw JSON only:\n{\n  "riskAgentReply": "Risk Analytics Engine reply mentioning @review_decision_agent.",\n  "policyAgentReply": "Policy Guard reply mentioning @review_decision_agent."\n}`
+        }).catch(() => JSON.stringify({
           riskAgentReply: "**Addressing @review_decision_agent:** The protective wellness administrative stay does not constitute a finding of misconduct. It is a standard non-prejudicial buffer that isolates both parties during review, preventing escalation of psychosomatic symptoms and organizational liability.",
           policyAgentReply: "**Addressing @review_decision_agent:** HR can legally freeze the attendance review under 'Operational Wellness Reconciliation' provisions. We direct the supervisor that attendance matters are under administrative review — without disclosing psychological symptoms — maintaining full confidentiality compliance."
-        });
-      }
-
-      let repliesResult = {
-        riskAgentReply: "Addressing @review_decision_agent: The risk escalates if ignored. Freeze is recommended.",
-        policyAgentReply: "Addressing @review_decision_agent: Sealed files safeguard the organizational exposure."
-      };
-
-      try {
-        const cleaned = repliesTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        repliesResult = { ...repliesResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse peer replies:", e);
-      }
-
-      addMsg("risk_agent", "Risk Analytics Engine", repliesResult.riskAgentReply, "agent_reply", null, "⚠️");
-      addMsg("policy_compliance_agent", "Policy Guard", repliesResult.policyAgentReply, "agent_reply", null, "📜");
-
-      // 7. Final Recommendation & Memo Compilation (gpt-4o-mini — fast)
-      let memoTextRaw = "";
-      try {
-        memoTextRaw = await runOpenAICompatibleCompletion({
+        })),
+        // 7. Final memo
+        runOpenAICompatibleCompletion({
           model: "gpt-4o-mini",
           timeoutMs: 10000,
           systemPrompt: "You are the Compliance Review Director for CareGuard. Compile the FINAL human-review memo for HR directors. Be precise and actionable.",
-          userPrompt: `Compile final memo based on:
-Triage: ${JSON.stringify(triageResult)}
-Risk: ${JSON.stringify(riskResult)}
-Policy: ${JSON.stringify(policyResult)}
-Care: ${JSON.stringify(careResult)}
-Debate: ${JSON.stringify(repliesResult)}
-
-${docDataString}
-
-Respond with raw JSON only:
-{
-  "finalRiskLevel": "low | moderate | high | critical",
-  "requiresHumanReview": true,
-  "recommendedNextStep": "One-sentence definitive administrative resolution",
-  "rationale": ["Legal rationale", "Employee support justification", "Compliance protection"],
-  "humanReviewerChecklist": ["Sequential action 1", "Action 2", "Action 3"]
-}`
-        });
-      } catch (e) {
-        console.warn("Final memo LLM call timed out, using built-in fallback:", e);
-        // Derive risk from earlier agents instead of making another hanging API call
-        const derivedRisk = riskResult.recommendedRiskLevel || triageResult.urgency || "moderate";
-        memoTextRaw = JSON.stringify({
+          userPrompt: `Compile final memo based on:\n${contextSummary}\n\nRespond with raw JSON only:\n{\n  "finalRiskLevel": "low | moderate | high | critical",\n  "requiresHumanReview": true,\n  "recommendedNextStep": "One-sentence definitive administrative resolution",\n  "rationale": ["Legal rationale", "Employee support justification", "Compliance protection"],\n  "humanReviewerChecklist": ["Sequential action 1", "Action 2", "Action 3"]\n}`
+        }).catch(() => JSON.stringify({
           finalRiskLevel: derivedRisk,
           requiresHumanReview: true,
-          recommendedNextStep: `Implement immediate administrative wellness stay: freeze disciplinary proceedings, activate EAP counselor referral, and decouple supervisor reporting line within 24 hours.`,
+          recommendedNextStep: "Implement immediate administrative wellness stay: freeze disciplinary proceedings, activate EAP counselor referral, and decouple supervisor reporting line within 24 hours.",
           rationale: [
             "Duty of care obligation requires proactive protective action before formal grievance is filed.",
             "Psychological distress symptoms are directly traceable to the supervisor relationship, creating organizational liability if unchecked.",
@@ -1226,8 +1150,29 @@ Respond with raw JSON only:
             "Contact employee to offer confidential EAP referral and obtain signed wellness consent form.",
             "Establish alternative reporting pathway (HR proxy or peer manager) for all task deliverables."
           ]
-        });
-      }
+        })),
+        // 8. HR Advisory
+        runOpenAICompatibleCompletion({
+          model: "gpt-4o-mini",
+          timeoutMs: 10000,
+          systemPrompt: "You are the HR Advisory Agent for CareGuard. Propose a collaborative consultative step-by-step action plan. Be precise, structured, and action-oriented.",
+          userPrompt: `Propose an HR action plan based on:\n${contextSummary}\n\nRespond with a raw JSON object matching this schema:\n{\n  "readMarkdown": "Step-by-step consultative action plan in Markdown."\n}`
+        }).catch(() => JSON.stringify({
+          readMarkdown: `**Consultative advisory received. Step-by-step action plan follows.**\n\nHaving reviewed the Director's final memo, I propose the following collaborative resolution pathway:\n\n**Immediate Actions (0-24h):**\n- **Step 1** — HR Manager contacts the affected individual directly and confidentially to offer EAP support.\n- **Step 2** — Activate the supervisor decoupling protocol (route deliverables via HR proxy).\n- **Step 3** — Prepare and deliver EAP referral letter.\n\n**Short-Term (24-72h):**\n- **Step 4** — HR briefs the site Safety Committee on roster FRMS omissions.\n- **Step 5** — Prepare WorkSafe notification draft in consultation with legal.`
+        })),
+      ]);
+
+      // Parse all 4 results
+      let reviewResult = {
+        challengePost: "**Review Stage Debate:** We require peer calibration before signing off.\n- @risk_agent: Can this remain high risk?\n- @policy_compliance_agent: What is the backup option?"
+      };
+      try { reviewResult = { ...reviewResult, ...JSON.parse(reviewTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { reviewResult.challengePost = reviewTextRaw || reviewResult.challengePost; }
+
+      let repliesResult = {
+        riskAgentReply: "Addressing @review_decision_agent: The risk escalates if ignored. Freeze is recommended.",
+        policyAgentReply: "Addressing @review_decision_agent: Sealed files safeguard the organizational exposure."
+      };
+      try { repliesResult = { ...repliesResult, ...JSON.parse(repliesTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { }
 
       let memoResult: FinalMemo = {
         finalRiskLevel: "moderate",
@@ -1236,13 +1181,15 @@ Respond with raw JSON only:
         rationale: ["Duty of care priority", "Secrecy compliance safeguard", "Anti-litigation quarantine"],
         humanReviewerChecklist: ["Postpone supervisor attendance hearings.", "Configure buddy check-ins.", "File Wellness sealed log."]
       };
+      try { memoResult = { ...memoResult, ...JSON.parse(memoTextRaw.replace(/```json/g, "").replace(/```/g, "").trim()) }; } catch { }
 
-      try {
-        const cleaned = memoTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        memoResult = { ...memoResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse Final Memo JSON:", e);
-      }
+      let hrResult = { readMarkdown: "HR Advisory recommendation compiled." };
+      try { const cleaned = hrTextRaw.replace(/```json/g, "").replace(/```/g, "").trim(); hrResult = { ...hrResult, ...JSON.parse(cleaned) }; } catch { hrResult.readMarkdown = hrTextRaw || hrResult.readMarkdown; }
+
+      // Display messages in correct narrative order: challenge → replies → final memo → HR
+      addMsg("review_decision_agent", "Compliance Review Director", reviewResult.challengePost, "challenge_issued", null, "⚖️");
+      addMsg("risk_agent", "Risk Analytics Engine", repliesResult.riskAgentReply, "agent_reply", null, "⚠️");
+      addMsg("policy_compliance_agent", "Policy Guard", repliesResult.policyAgentReply, "agent_reply", null, "📜");
 
       // Update main Case instance in storage
       const resolvedRisk = memoResult.finalRiskLevel as any;
@@ -1263,41 +1210,6 @@ The multi-agent taskforce has finalized consensus using heterogeneous LLM engine
 The room state variables have been refreshed. Sealed record routed for final signatory activation.`;
 
       addMsg("review_decision_agent", "Compliance Review Director", finalMemoText, "final_memo", memoResult, "⚖️");
-
-      // 8. HR Advisory Call
-      let hrTextRaw = "";
-      try {
-        hrTextRaw = await runOpenAICompatibleCompletion({
-          model: "gpt-4o-mini",
-          timeoutMs: 10000,
-          systemPrompt: "You are the HR Advisory Agent for CareGuard. Propose a collaborative consultative step-by-step action plan based on the final compliance memo. Be precise, structured, and action-oriented.",
-          userPrompt: `Propose an HR action plan based on:
-Final Memo: ${JSON.stringify(memoResult)}
-Case Details: ${docDataString}
-
-Respond with a raw JSON object matching this schema:
-{
-  "readMarkdown": "Step-by-step consultative action plan in Markdown."
-}`
-        });
-      } catch (e) {
-        console.warn("HR Advisory LLM call failed, using fallback:", e);
-        hrTextRaw = JSON.stringify({
-          readMarkdown: `**Consultative advisory received. Step-by-step action plan follows.**\n\nHaving reviewed the Director's final memo, I propose the following collaborative resolution pathway:\n\n**Immediate Actions (0-24h):**\n- **Step 1** — HR Manager contacts the affected individual directly and confidentially to offer EAP support.\n- **Step 2** — Realize the supervisor decoupling protocol (route deliverables via HR proxy).\n- **Step 3** — Prepare and deliver EAP referral letter.\n\n**Short-Term (24-72h):**\n- **Step 4** — HR briefs the site Safety Committee on roster FRMS omissions.\n- **Step 5** — Prepare WorkSafe notification draft in consultation with legal.`
-        });
-      }
-
-      let hrResult = {
-        readMarkdown: "HR Advisory recommendation compiled."
-      };
-      try {
-        const cleaned = hrTextRaw.replace(/```json/g, "").replace(/```/g, "").trim();
-        hrResult = { ...hrResult, ...JSON.parse(cleaned) };
-      } catch (e) {
-        console.warn("Failed to parse HR Advisory JSON:", e);
-        hrResult.readMarkdown = hrTextRaw || hrResult.readMarkdown;
-      }
-
       addMsg("hr_advisory", "HR Advisory", hrResult.readMarkdown, "agent_report", hrResult, "👔");
       persistCase(caseItem);
       return res.json({ caseItem, messages: messages[caseId] });
